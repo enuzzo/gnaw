@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gnaw.dev/contract/events.schema.json",
+  "title": "Gnaw stdout event",
+  "description": "One NDJSON object emitted by the Gnaw engine on stdout.",
+  "type": "object",
+  "required": ["v", "type"],
+  "properties": {
+    "v": { "const": 2 },
+    "type": {
+      "type": "string",
+      "enum": [
+        "hello",
+        "browser",
+        "start",
+        "page_start",
+        "request",
+        "asset",
+        "page_done",
+        "stack",
+        "progress",
+        "skip",
+        "warning",
+        "error",
+        "state",
+        "done"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

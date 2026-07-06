@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gnaw.dev/contract/waterfall.schema.json",
+  "title": "Gnaw waterfall row",
+  "description": "One network response row from waterfall.ndjson.",
+  "type": "object",
+  "required": [
+    "t",
+    "url",
+    "method",
+    "status",
+    "kind",
+    "contentType",
+    "bytes",
+    "durationMs",
+    "fromCache",
+    "viaJs",
+    "referrer",
+    "page"
+  ],
+  "properties": {
+    "t": { "type": "integer", "minimum": 0 },
+    "url": { "type": "string" },
+    "method": { "type": "string" },
+    "status": { "type": "integer", "minimum": 0 },
+    "kind": {
+      "type": "string",
+      "enum": ["HTML", "JS", "CSS", "IMG", "FONT", "JSON", "MEDIA", "WASM", "OTHER"]
+    },
+    "contentType": { "type": "string" },
+    "bytes": { "type": "integer", "minimum": 0 },
+    "durationMs": { "type": "integer", "minimum": 0 },
+    "fromCache": { "type": "boolean" },
+    "viaJs": { "type": "boolean" },
+    "referrer": { "type": ["string", "null"] },
+    "page": { "type": "string" }
+  },
+  "additionalProperties": false
+}
