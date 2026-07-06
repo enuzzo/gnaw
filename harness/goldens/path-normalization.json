@@ -1,0 +1,107 @@
+[
+  {
+    "kind": "page",
+    "url": "https://EXAMPLE.com/",
+    "expected": {
+      "host": "example.com",
+      "relativePath": "example.com/index.html"
+    }
+  },
+  {
+    "kind": "rendered",
+    "url": "https://Example.com/products/widget#details",
+    "expected": {
+      "host": "example.com",
+      "relativePath": "example.com/products/widget/index.html"
+    }
+  },
+  {
+    "kind": "asset",
+    "url": "https://example.com/assets/app.js?v=3",
+    "contentType": "application/javascript",
+    "expected": {
+      "host": "example.com",
+      "relativePath": "example.com/assets/app~q951eba4f.js"
+    }
+  },
+  {
+    "kind": "asset",
+    "url": "https://cdn.example.com/a%20b/%E2%82%AC.json?x=1",
+    "contentType": "application/json",
+    "expected": {
+      "host": "cdn.example.com",
+      "relativePath": "cdn.example.com/a_b~uc8687a08/_~u1998b819~q1f206b11.json"
+    }
+  },
+  {
+    "kind": "asset",
+    "url": "https://api.example.com/v1/feed?limit=10",
+    "contentType": "application/json; charset=utf-8",
+    "expected": {
+      "host": "api.example.com",
+      "relativePath": "api.example.com/v1/feed~q9c21d9e6.json"
+    }
+  },
+  {
+    "kind": "page",
+    "url": "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expected": {
+      "host": "example.com",
+      "relativePath": "example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa~9d079339/index.html"
+    }
+  },
+  {
+    "kind": "asset",
+    "url": "https://example.com/Images/Logo.png",
+    "contentType": "image/png",
+    "expected": {
+      "host": "example.com",
+      "relativePath": "example.com/Images/Logo~cfd5bd8d0.png"
+    }
+  },
+  {
+    "kind": "asset",
+    "url": "https://example.com/images/logo.png",
+    "contentType": "image/png",
+    "expected": {
+      "host": "example.com",
+      "relativePath": "example.com/images/logo.png"
+    }
+  },
+  {
+    "kind": "asset",
+    "url": "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?v=1",
+    "contentType": "application/json",
+    "expected": {
+      "host": "example.com",
+      "relativePath": "example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa~2402f7a9"
+    }
+  },
+  {
+    "kind": "asset",
+    "url": "https://example.com/a%20b",
+    "contentType": null,
+    "expected": {
+      "host": "example.com",
+      "relativePath": "example.com/a_b~uc8687a08"
+    }
+  },
+  {
+    "kind": "asset",
+    "url": "https://example.com/a_b",
+    "contentType": null,
+    "expected": {
+      "host": "example.com",
+      "relativePath": "example.com/a_b"
+    }
+  },
+  {
+    "kind": "asset",
+    "url": "https://example.com/a%2Fb",
+    "contentType": null,
+    "expected": {
+      "host": "example.com",
+      "relativePath": "example.com/a_b~uc14cddc0"
+    }
+  }
+]
