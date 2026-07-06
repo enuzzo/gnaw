@@ -25,7 +25,7 @@ describe("haul golden snapshots", () => {
     const result = await captureSite({
       entrypoint: `${fixture.origin}/`,
       outDir,
-      modes: ["study"],
+      modes: ["study", "navigable"],
       depth: 0,
       eventSink: () => undefined,
       logSink: () => undefined

@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Next.js",
+    "signals": [
+      { "kind": "html", "pattern": "__NEXT_DATA__", "label": "window.__NEXT_DATA__", "weight": 0.92 },
+      { "kind": "asset", "pattern": "/_next/", "label": "/_next/ asset paths", "weight": 0.7 },
+      { "kind": "header", "pattern": "x-powered-by: next.js", "label": "X-Powered-By: Next.js", "weight": 0.72 }
+    ]
+  },
+  {
+    "name": "WordPress",
+    "signals": [
+      { "kind": "html", "pattern": "wp-content", "label": "wp-content paths", "weight": 0.72 },
+      { "kind": "asset", "pattern": "/wp-content/", "label": "wp-content asset paths", "weight": 0.72 },
+      { "kind": "asset", "pattern": "/wp-json/", "label": "/wp-json/ paths", "weight": 0.7 },
+      { "kind": "html", "pattern": "window.wp", "label": "window.wp global", "weight": 0.65 },
+      { "kind": "html", "pattern": "name=\"generator\" content=\"wordpress", "label": "meta generator WordPress", "weight": 0.74 },
+      { "kind": "html", "pattern": "page-template-default", "label": "page-template-default body class", "weight": 0.3 },
+      { "kind": "html", "pattern": "wp-", "label": "wp-* markup", "weight": 0.2 }
+    ]
+  },
+  {
+    "name": "Elementor",
+    "signals": [
+      { "kind": "html", "pattern": "elementor", "label": "elementor markup", "weight": 0.82 },
+      { "kind": "asset", "pattern": "/elementor/", "label": "elementor asset paths", "weight": 0.64 }
+    ]
+  },
+  {
+    "name": "Webflow",
+    "signals": [
+      { "kind": "html", "pattern": "data-wf-", "label": "data-wf-* markup", "weight": 0.86 },
+      { "kind": "html", "pattern": "webflow", "label": "Webflow markup", "weight": 0.62 }
+    ]
+  },
+  {
+    "name": "Shopify",
+    "signals": [
+      { "kind": "html", "pattern": "window.shopify", "label": "window.Shopify global", "weight": 0.82 },
+      { "kind": "asset", "pattern": "cdn.shopify.com", "label": "cdn.shopify.com assets", "weight": 0.78 }
+    ]
+  },
+  {
+    "name": "Vercel",
+    "signals": [
+      { "kind": "header", "pattern": "server: vercel", "label": "server: Vercel header", "weight": 0.7 },
+      { "kind": "header", "pattern": "x-vercel", "label": "x-vercel header", "weight": 0.7 }
+    ]
+  }
+]

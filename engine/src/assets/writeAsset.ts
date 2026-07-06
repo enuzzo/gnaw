@@ -9,6 +9,7 @@ export interface WriteAssetOptions {
   url: string;
   contentType?: string | null;
   body: Buffer | Uint8Array;
+  rootPrefix?: string;
   normalizedPath?: string;
   normalizePath?: NormalizeAssetPath;
 }
@@ -29,7 +30,9 @@ export async function writeAsset(options: WriteAssetOptions): Promise<WriteAsset
 
   const safeRelativePath = validateRelativeRawPath(normalizedPath);
   const outputRoot = resolve(options.outputRoot);
-  const rawRoot = resolve(outputRoot, "study", "raw");
+  const rootPrefix = options.rootPrefix ?? "study/raw";
+  const rootParts = validateRootPrefix(rootPrefix).split("/");
+  const rawRoot = resolve(outputRoot, ...rootParts);
   const pathParts = safeRelativePath.split("/");
   const absolutePath = resolve(rawRoot, ...pathParts);
 
@@ -37,15 +40,26 @@ export async function writeAsset(options: WriteAssetOptions): Promise<WriteAsset
     throw new Error(`Refusing path traversal outside haul: ${normalizedPath}`);
   }
 
-  await ensureSafeDirectory(outputRoot, ["study", "raw", ...pathParts.slice(0, -1)]);
+  await ensureSafeDirectory(outputRoot, [...rootParts, ...pathParts.slice(0, -1)]);
   await assertNotSymlink(absolutePath);
   await writeFile(absolutePath, body);
 
   return {
     bytes: body.byteLength,
     sha256: createHash("sha256").update(body).digest("hex"),
-    rawPath: `study/raw/${safeRelativePath}`
+    rawPath: `${rootParts.join("/")}/${safeRelativePath}`
   };
+}
+
+function validateRootPrefix(path: string): string {
+  if (isAbsolute(path)) {
+    throw new Error(`Refusing path traversal outside haul: ${path}`);
+  }
+  const parts = path.split(/[\\/]+/);
+  if (parts.length < 1 || parts.some((part) => part === "" || part === "." || part === "..")) {
+    throw new Error(`Refusing path traversal outside haul: ${path}`);
+  }
+  return parts.join("/");
 }
 
 function validateRelativeRawPath(path: string): string {

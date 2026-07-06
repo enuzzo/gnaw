@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { createCaptureController } from "./capture/controller.js";
 import { createEventWriter } from "./capture/events.js";
 import { captureSite, type CaptureOptions, type CaptureResult } from "./capture/capture.js";
+import { buildBlockPatterns } from "./safety/blocklist.js";
 export { engineIdentity } from "./identity.js";
 
 export type CliDependencies = {
@@ -41,6 +42,7 @@ export function createCliProgram({
     .option("--max-bytes <n>", "maximum total bytes", "2147483648")
     .option("--max-asset-bytes <n>", "maximum asset bytes", "104857600")
     .option("--block <pattern>", "navigation blocklist pattern", collect, [])
+    .option("--unblock <pattern>", "remove a default navigation blocklist pattern", collect, [])
     .action(async (url: string, options: Record<string, unknown>) => {
       const modes = parseModes(String(options.mode ?? "study"));
       const writer = createEventWriter({ stdout, stderr });
@@ -62,6 +64,10 @@ export function createCliProgram({
           maxPages: Number.parseInt(String(options.maxPages ?? "200"), 10),
           maxTotalBytes: Number.parseInt(String(options.maxBytes ?? "2147483648"), 10),
           maxAssetBytes: Number.parseInt(String(options.maxAssetBytes ?? "104857600"), 10),
+          blockPatterns: buildBlockPatterns({
+            add: Array.isArray(options.block) ? options.block.map(String) : [],
+            remove: Array.isArray(options.unblock) ? options.unblock.map(String) : []
+          }),
           signal: abortController.signal,
           control: controller,
           eventSink: (event) => writer.event(event),

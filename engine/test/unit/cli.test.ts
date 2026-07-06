@@ -48,7 +48,11 @@ describe("CLI surface", () => {
       "--max-bytes",
       "1000",
       "--max-asset-bytes",
-      "500"
+      "500",
+      "--block",
+      "/private",
+      "--unblock",
+      "/cart"
     ]);
 
     expect(calls).toHaveLength(1);
@@ -59,8 +63,10 @@ describe("CLI surface", () => {
       depth: 0,
       maxPages: 3,
       maxTotalBytes: 1000,
-      maxAssetBytes: 500
+      maxAssetBytes: 500,
+      blockPatterns: expect.arrayContaining(["/logout", "/private"])
     });
+    expect((calls[0] as { blockPatterns: string[] }).blockPatterns).not.toContain("/cart");
     expect(JSON.parse(stdout.join("").trim())).toMatchObject({
       v: 2,
       type: "done",

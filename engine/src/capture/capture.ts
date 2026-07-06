@@ -6,6 +6,14 @@ import { writeAsset, type WriteAssetResult } from "../assets/writeAsset.js";
 import { resolveBrowser } from "../browser/resolveBrowser.js";
 import { createPathNormalizer } from "../paths/normalizePath.js";
 import { writeRenderedSnapshot } from "../render/renderedSnapshot.js";
+import { isBlockedNavigationUrl } from "../safety/blocklist.js";
+import { detectStack, type DetectedStack } from "../stack/detectStack.js";
+import {
+  writeBeautifiedAsset,
+  writeContextMarkdown,
+  writeNavigablePages,
+  writeSourceMapIfPresent
+} from "../study/outputs.js";
 import { engineIdentity } from "../identity.js";
 import { appendWaterfallRow, type WaterfallRow } from "./waterfall.js";
 import {
@@ -31,6 +39,7 @@ export type CaptureOptions = {
   maxPages?: number;
   maxTotalBytes?: number;
   maxAssetBytes?: number;
+  blockPatterns?: string[];
   eventSink: CaptureEventSink;
   logSink: CaptureLogSink;
 };
@@ -50,8 +59,11 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
   const skippedUrls: Array<{ url: string; reason: string }> = [];
   const errors: Array<{ code: string; url?: string; message: string; fatal?: boolean }> = [];
   const logLines: string[] = [];
+  const pageHtml = new Map<string, string>();
+  const responseHeaders: Record<string, string> = {};
   const requestIds = new WeakMap<Request, string>();
   const responseTasks: Array<Promise<void>> = [];
+  const seenPageUrls = new Set<string>();
   let requestCounter = 0;
   let totalBytes = 0;
   let result: "complete" | "partial" | "canceled" = "complete";
@@ -60,6 +72,9 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
   let guardrailStopped = false;
   let browser: Browser | undefined;
   let manifestBrowser = "unknown";
+  let stack: DetectedStack = { primary: null, detected: [] };
+  const wantsStudy = options.modes.includes("study");
+  const wantsNavigable = options.modes.includes("navigable");
   const captureConfig = defaultCaptureConfig({
     depth: options.depth ?? 1,
     maxPages: options.maxPages ?? 200,
@@ -102,6 +117,7 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
       modes: options.modes,
       config: captureConfig,
       browser: manifestBrowser,
+      stack,
       pages,
       assets,
       skippedUrls,
@@ -159,8 +175,6 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
       return { haulPath };
     }
 
-    options.eventSink({ v: 2, type: "page_start", url: options.entrypoint, depth: 0 });
-
     browser = await chromium.launch({
       executablePath: browserInfo.executablePath,
       headless: true,
@@ -169,6 +183,7 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
     manifestBrowser = `${browserInfo.label} ${browser.version()}`;
     const context = await browser.newContext({ userAgent: captureConfig.userAgent });
     const page = await context.newPage();
+    let activePageUrl = options.entrypoint;
 
     page.on("request", (request) => {
       if (request.method() !== "GET") {
@@ -188,7 +203,9 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
         const id = requestIds.get(request) ?? `r-${String(++requestCounter).padStart(4, "0")}`;
         const requestStarted = Date.now();
         const url = response.url();
-        const contentType = response.headers()["content-type"] ?? "application/octet-stream";
+        const headers = response.headers();
+        Object.assign(responseHeaders, headers);
+        const contentType = headers["content-type"] ?? "application/octet-stream";
         const body = await response.body().catch(() => Buffer.alloc(0));
         const kind = classifyKind(url, contentType);
         const maxAssetBytes = captureConfig.maxAssetBytes;
@@ -227,13 +244,31 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
         }
 
         totalBytes += body.byteLength;
-        const write = await writeAsset({
-          outputRoot: haulPath,
-          url,
-          contentType,
-          body,
-          normalizedPath: normalizer.normalizeAsset(url, contentType).relativePath
-        });
+        const normalizedAssetPath = normalizer.normalizeAsset(url, contentType).relativePath;
+        const studyWrite = wantsStudy
+          ? await writeAsset({
+            outputRoot: haulPath,
+            url,
+            contentType,
+            body,
+            rootPrefix: "study/raw",
+            normalizedPath: normalizedAssetPath
+          })
+          : undefined;
+        const navigableWrite = wantsNavigable
+          ? await writeAsset({
+            outputRoot: haulPath,
+            url,
+            contentType,
+            body,
+            rootPrefix: "navigable/_assets",
+            normalizedPath: normalizedAssetPath
+          })
+          : undefined;
+        const write = studyWrite ?? navigableWrite;
+        if (!write) {
+          throw new Error("No output mode selected for asset write");
+        }
         const asset = toManifestAsset({
           url,
           kind,
@@ -244,6 +279,17 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
           viaJs: request.resourceType() === "xhr" || request.resourceType() === "fetch",
           fromCache: false
         });
+        asset.navigablePath = navigableWrite?.rawPath;
+        if (wantsStudy && studyWrite) {
+          asset.beautifiedPath = await writeBeautifiedAsset({ haulPath, asset, body });
+          asset.sourceMapPath = await writeSourceMapIfPresent({
+            haulPath,
+            assetUrl: url,
+            rawPath: asset.rawPath,
+            body,
+            normalizeSourceMapPath: (sourceMapUrl) => normalizer.normalizeAsset(sourceMapUrl, "application/json").relativePath
+          });
+        }
         assets.push(asset);
         await appendWaterfallRow(haulPath, {
           t: requestStarted - started,
@@ -257,7 +303,7 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
           fromCache: false,
           viaJs: asset.viaJs,
           referrer: asset.referrer,
-          page: options.entrypoint
+          page: activePageUrl
         });
         options.eventSink({
           v: 2,
@@ -281,27 +327,107 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
       responseTasks.push(task);
     });
 
-    const response = await page.goto(options.entrypoint, { waitUntil: "load" });
-    await page.waitForLoadState("networkidle", { timeout: 3000 }).catch(() => undefined);
-    await Promise.allSettled(responseTasks);
-    const html = await page.content();
-    const renderedPath = `study/rendered/${normalizer.normalizeRendered(options.entrypoint).relativePath}`;
-    await writeRenderedSnapshot({ haulPath, renderedPath, html });
+    const queue: Array<{ url: string; depth: number; discoveredFrom: string | null }> = [
+      { url: options.entrypoint, depth: 0, discoveredFrom: null }
+    ];
 
-    pages.push({
-      url: options.entrypoint,
-      title: extractTitle(html),
-      depth: 0,
-      status: response?.status() ?? 0,
-      discoveredFrom: null,
-      renderedPath
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (seenPageUrls.has(current.url)) {
+        continue;
+      }
+      if (seenPageUrls.size >= captureConfig.maxPages) {
+        setPartial();
+        skippedUrls.push({ url: current.url, reason: "max_pages" });
+        options.eventSink({ v: 2, type: "skip", url: current.url, reason: "max_pages" });
+        continue;
+      }
+      await options.control?.waitIfPaused();
+      if (options.signal?.aborted) {
+        canceled = true;
+        result = "canceled";
+        break;
+      }
+
+      activePageUrl = current.url;
+      seenPageUrls.add(current.url);
+      options.eventSink({ v: 2, type: "page_start", url: current.url, depth: current.depth });
+      const response = await page.goto(current.url, { waitUntil: "load" });
+      await page.waitForLoadState("networkidle", { timeout: 3000 }).catch(() => undefined);
+      await Promise.allSettled(responseTasks);
+      const html = await page.content();
+      const renderedPath = wantsStudy ? `study/rendered/${normalizer.normalizeRendered(current.url).relativePath}` : undefined;
+      if (renderedPath) {
+        await writeRenderedSnapshot({ haulPath, renderedPath, html });
+      }
+      pageHtml.set(current.url, html);
+
+      pages.push({
+        url: current.url,
+        title: extractTitle(html),
+        depth: current.depth,
+        status: response?.status() ?? 0,
+        discoveredFrom: current.discoveredFrom,
+        ...(renderedPath ? { renderedPath } : {})
+      });
+
+      options.eventSink({ v: 2, type: "page_done", url: current.url, title: pages[pages.length - 1].title, assets: assets.length });
+      options.eventSink({ v: 2, type: "progress", pages: pages.length, assets: assets.length, bytes: totalBytes, queued: queue.length, elapsedMs: Date.now() - started });
+
+      if (current.depth < captureConfig.depth) {
+        for (const link of extractNavigationLinks(html, current.url)) {
+          if (seenPageUrls.has(link) || queue.some((queued) => queued.url === link)) {
+            continue;
+          }
+          if (new URL(link).hostname.toLowerCase() !== host) {
+            skippedUrls.push({ url: link, reason: "out_of_scope" });
+            options.eventSink({ v: 2, type: "skip", url: link, reason: "out_of_scope" });
+            continue;
+          }
+          if (isBlockedNavigationUrl(link, options.blockPatterns)) {
+            skippedUrls.push({ url: link, reason: "blocked_pattern" });
+            options.eventSink({ v: 2, type: "skip", url: link, reason: "blocked_pattern" });
+            continue;
+          }
+          queue.push({ url: link, depth: current.depth + 1, discoveredFrom: current.url });
+        }
+      }
+    }
+
+    stack = detectStack({
+      html: [...pageHtml.values()].join("\n"),
+      assetUrls: assets.map((asset) => asset.url),
+      headers: responseHeaders
     });
+    if (stack.primary !== null) {
+      options.eventSink({ v: 2, type: "stack", primary: stack.primary, detected: stack.detected });
+    }
 
     if (canceled) {
       result = "canceled";
     }
-    options.eventSink({ v: 2, type: "page_done", url: options.entrypoint, title: pages[0].title, assets: assets.length });
-    options.eventSink({ v: 2, type: "progress", pages: pages.length, assets: assets.length, bytes: totalBytes, queued: 0, elapsedMs: Date.now() - started });
+    if (options.modes.includes("navigable")) {
+      await writeNavigablePages({ haulPath, pages, pageHtml, assets });
+    }
+    if (options.modes.includes("study")) {
+      const previewManifest = buildManifest({
+        entrypoint: options.entrypoint,
+        host,
+        startedAt: new Date(started).toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: Date.now() - started,
+        result,
+        modes: options.modes,
+        config: captureConfig,
+        browser: manifestBrowser,
+        stack,
+        pages,
+        assets,
+        skippedUrls,
+        errors
+      });
+      await writeContextMarkdown(haulPath, previewManifest);
+    }
     log(captureResultLog(result));
     await browser.close();
     browser = undefined;
@@ -355,6 +481,20 @@ function classifyErrorCode(message: string): string {
   if (message.includes("write") || message.includes("EACCES") || message.includes("ENOENT")) return "write_failed";
   if (message.includes("Target page") || message.includes("browser")) return "browser_crash";
   return "nav_timeout";
+}
+
+function extractNavigationLinks(html: string, baseUrl: string): string[] {
+  const links = new Set<string>();
+  const anchorPattern = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>/gi;
+  let match = anchorPattern.exec(html);
+  while (match) {
+    const href = match[1];
+    if (!href.startsWith("#") && !href.startsWith("mailto:") && !href.startsWith("tel:")) {
+      links.add(new URL(href, baseUrl).href);
+    }
+    match = anchorPattern.exec(html);
+  }
+  return [...links];
 }
 
 function toManifestAsset(input: {

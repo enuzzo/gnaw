@@ -1,26 +1,49 @@
 {
   "files": [
     "MANIFEST.json",
+    "context.md",
     "gnaw.log",
+    "navigable/_assets/127.0.0.1/app.js",
+    "navigable/_assets/127.0.0.1/index.html",
+    "navigable/_assets/127.0.0.1/logo.svg",
+    "navigable/_assets/127.0.0.1/style.css",
+    "navigable/_assets/127.0.0.1/theme.css",
+    "navigable/index.html",
+    "study/beautified/127.0.0.1/app.js",
+    "study/beautified/127.0.0.1/style.css",
+    "study/beautified/127.0.0.1/theme.css",
     "study/raw/127.0.0.1/app.js",
     "study/raw/127.0.0.1/index.html",
     "study/raw/127.0.0.1/logo.svg",
     "study/raw/127.0.0.1/style.css",
     "study/raw/127.0.0.1/theme.css",
     "study/rendered/127.0.0.1/index.html",
+    "study/sourcemaps/127.0.0.1/app.js.map",
     "waterfall.ndjson"
   ],
   "fileHashes": {
-    "study/raw/127.0.0.1/app.js": "1ccfbb1b7edeb8bea89ea0262e8c1bd45817f310ad83409141dd0eb7cb75fabe",
+    "context.md": "f89ee4a28a9e4edb8781862012c74ad45bc5135e4f3b0528207b14b00ed3fd5e",
+    "navigable/_assets/127.0.0.1/app.js": "951d52d9dc0ca53a94cfea10ea8b2242043dff5181370211b52b7d218ff1a046",
+    "navigable/_assets/127.0.0.1/index.html": "bbf26ed9fb9ed4e2cab38508af7170502b41c09bef6de9d88ef4715a8a060086",
+    "navigable/_assets/127.0.0.1/logo.svg": "b42e14989b074b738c5b13f8fb6bea9fe429ea90341592300e527c4523ecc982",
+    "navigable/_assets/127.0.0.1/style.css": "e5bdecbe75886119aac78bb2d8d33811de67b71f2cf7ccbb6fb9849a0a05801c",
+    "navigable/_assets/127.0.0.1/theme.css": "78a573e5cc84f1bebf03558cd73b4cffd485d04271234eab8bafeb220c35d0f6",
+    "navigable/index.html": "8526714adde8b85b5fd875678d2a495b739e7201bfa35d76b505a0e4b01a0b8d",
+    "study/beautified/127.0.0.1/app.js": "951d52d9dc0ca53a94cfea10ea8b2242043dff5181370211b52b7d218ff1a046",
+    "study/beautified/127.0.0.1/style.css": "e5bdecbe75886119aac78bb2d8d33811de67b71f2cf7ccbb6fb9849a0a05801c",
+    "study/beautified/127.0.0.1/theme.css": "78a573e5cc84f1bebf03558cd73b4cffd485d04271234eab8bafeb220c35d0f6",
+    "study/raw/127.0.0.1/app.js": "951d52d9dc0ca53a94cfea10ea8b2242043dff5181370211b52b7d218ff1a046",
     "study/raw/127.0.0.1/index.html": "bbf26ed9fb9ed4e2cab38508af7170502b41c09bef6de9d88ef4715a8a060086",
     "study/raw/127.0.0.1/logo.svg": "b42e14989b074b738c5b13f8fb6bea9fe429ea90341592300e527c4523ecc982",
     "study/raw/127.0.0.1/style.css": "e5bdecbe75886119aac78bb2d8d33811de67b71f2cf7ccbb6fb9849a0a05801c",
     "study/raw/127.0.0.1/theme.css": "78a573e5cc84f1bebf03558cd73b4cffd485d04271234eab8bafeb220c35d0f6",
-    "study/rendered/127.0.0.1/index.html": "80a3adbce884abe5c4d1731fea7fd06d68a6fe2d277ee8af08988026f06a92c2"
+    "study/rendered/127.0.0.1/index.html": "80a3adbce884abe5c4d1731fea7fd06d68a6fe2d277ee8af08988026f06a92c2",
+    "study/sourcemaps/127.0.0.1/app.js.map": "3465401521e8d193a46844694a630488b798fbab1e09c671316cd9bdda7af1b1"
   },
   "manifest": {
     "result": "complete",
     "modes": [
+      "navigable",
       "study"
     ],
     "stats": {
@@ -42,13 +65,18 @@
       "skippedUrls": []
     },
     "errors": [],
+    "stack": {
+      "primary": null,
+      "detected": []
+    },
     "pages": [
       {
         "urlPath": "/",
         "title": "Static Fixture",
         "depth": 0,
         "status": 200,
-        "renderedPath": "study/rendered/127.0.0.1/index.html"
+        "renderedPath": "study/rendered/127.0.0.1/index.html",
+        "navigablePath": "navigable/index.html"
       }
     ],
     "assets": [
@@ -57,9 +85,12 @@
         "kind": "JS",
         "status": 200,
         "contentType": "text/javascript; charset=utf-8",
-        "bytes": 58,
-        "sha256": "1ccfbb1b7edeb8bea89ea0262e8c1bd45817f310ad83409141dd0eb7cb75fabe",
+        "bytes": 90,
+        "sha256": "951d52d9dc0ca53a94cfea10ea8b2242043dff5181370211b52b7d218ff1a046",
         "rawPath": "study/raw/127.0.0.1/app.js",
+        "navigablePath": "navigable/_assets/127.0.0.1/app.js",
+        "beautifiedPath": "study/beautified/127.0.0.1/app.js",
+        "sourceMapPath": "study/sourcemaps/127.0.0.1/app.js.map",
         "referrerPath": "/",
         "viaJs": false,
         "fromCache": false
@@ -72,6 +103,7 @@
         "bytes": 557,
         "sha256": "bbf26ed9fb9ed4e2cab38508af7170502b41c09bef6de9d88ef4715a8a060086",
         "rawPath": "study/raw/127.0.0.1/index.html",
+        "navigablePath": "navigable/_assets/127.0.0.1/index.html",
         "referrerPath": null,
         "viaJs": false,
         "fromCache": false
@@ -84,6 +116,7 @@
         "bytes": 121,
         "sha256": "b42e14989b074b738c5b13f8fb6bea9fe429ea90341592300e527c4523ecc982",
         "rawPath": "study/raw/127.0.0.1/logo.svg",
+        "navigablePath": "navigable/_assets/127.0.0.1/logo.svg",
         "referrerPath": "/",
         "viaJs": false,
         "fromCache": false
@@ -96,6 +129,8 @@
         "bytes": 65,
         "sha256": "e5bdecbe75886119aac78bb2d8d33811de67b71f2cf7ccbb6fb9849a0a05801c",
         "rawPath": "study/raw/127.0.0.1/style.css",
+        "navigablePath": "navigable/_assets/127.0.0.1/style.css",
+        "beautifiedPath": "study/beautified/127.0.0.1/style.css",
         "referrerPath": "/",
         "viaJs": false,
         "fromCache": false
@@ -108,6 +143,8 @@
         "bytes": 33,
         "sha256": "78a573e5cc84f1bebf03558cd73b4cffd485d04271234eab8bafeb220c35d0f6",
         "rawPath": "study/raw/127.0.0.1/theme.css",
+        "navigablePath": "navigable/_assets/127.0.0.1/theme.css",
+        "beautifiedPath": "study/beautified/127.0.0.1/theme.css",
         "referrerPath": "/",
         "viaJs": false,
         "fromCache": false
@@ -135,7 +172,7 @@
         "status": 200,
         "kind": "JS",
         "contentType": "text/javascript; charset=utf-8",
-        "bytes": 58,
+        "bytes": 90,
         "fromCache": false,
         "viaJs": false,
         "referrerPath": "/",

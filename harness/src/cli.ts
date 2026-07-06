@@ -26,6 +26,7 @@ export type HaulGoldenSummary = {
       skippedUrls: unknown[];
     };
     errors: unknown[];
+    stack: unknown;
     pages: Array<{
       urlPath: string;
       title: string;
@@ -42,6 +43,9 @@ export type HaulGoldenSummary = {
       bytes: number;
       sha256: string;
       rawPath: string;
+      navigablePath?: string;
+      beautifiedPath?: string;
+      sourceMapPath?: string;
       referrerPath: string | null;
       viaJs: boolean;
       fromCache: boolean;
@@ -122,6 +126,7 @@ export async function summarizeHaulForGolden(haulPath: string): Promise<HaulGold
         skippedUrls: manifest.safety.skippedUrls
       },
       errors: manifest.errors ?? [],
+      stack: manifest.stack,
       pages: manifest.pages.map((page: {
         url: string;
         title: string;
@@ -134,8 +139,8 @@ export async function summarizeHaulForGolden(haulPath: string): Promise<HaulGold
         title: page.title,
         depth: page.depth,
         status: page.status,
-        renderedPath: page.renderedPath,
-        navigablePath: page.navigablePath
+        ...(page.renderedPath ? { renderedPath: page.renderedPath } : {}),
+        ...(page.navigablePath ? { navigablePath: page.navigablePath } : {})
       })).sort((a: { urlPath: string }, b: { urlPath: string }) => a.urlPath.localeCompare(b.urlPath)),
       assets: manifest.assets.map((asset: {
         url: string;
@@ -145,6 +150,9 @@ export async function summarizeHaulForGolden(haulPath: string): Promise<HaulGold
         bytes: number;
         sha256: string;
         rawPath: string;
+        navigablePath?: string;
+        beautifiedPath?: string;
+        sourceMapPath?: string;
         referrer: string | null;
         viaJs: boolean;
         fromCache: boolean;
@@ -156,6 +164,9 @@ export async function summarizeHaulForGolden(haulPath: string): Promise<HaulGold
         bytes: asset.bytes,
         sha256: asset.sha256,
         rawPath: asset.rawPath,
+        ...(asset.navigablePath ? { navigablePath: asset.navigablePath } : {}),
+        ...(asset.beautifiedPath ? { beautifiedPath: asset.beautifiedPath } : {}),
+        ...(asset.sourceMapPath ? { sourceMapPath: asset.sourceMapPath } : {}),
         referrerPath: nullableUrlPath(asset.referrer),
         viaJs: asset.viaJs,
         fromCache: asset.fromCache
@@ -205,7 +216,14 @@ async function listFiles(root: string): Promise<string[]> {
 }
 
 async function hashDeterministicFiles(haulPath: string, files: string[]): Promise<Record<string, string>> {
-  const deterministicFiles = files.filter((file) => file.startsWith("study/raw/") || file.startsWith("study/rendered/"));
+  const deterministicFiles = files.filter((file) =>
+    file === "context.md" ||
+    file.startsWith("navigable/") ||
+    file.startsWith("study/raw/") ||
+    file.startsWith("study/rendered/") ||
+    file.startsWith("study/beautified/") ||
+    file.startsWith("study/sourcemaps/")
+  );
   const entries = await Promise.all(
     deterministicFiles.map(async (file) => [file, sha256(await readFile(join(haulPath, file)))] as const)
   );

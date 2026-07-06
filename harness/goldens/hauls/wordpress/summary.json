@@ -1,13 +1,21 @@
 {
   "files": [
     "MANIFEST.json",
+    "context.md",
     "gnaw.log",
+    "navigable/_assets/127.0.0.1/index.html",
+    "navigable/_assets/127.0.0.1/wp-content/uploads/hero-placeholder.svg",
+    "navigable/index.html",
     "study/raw/127.0.0.1/index.html",
     "study/raw/127.0.0.1/wp-content/uploads/hero-placeholder.svg",
     "study/rendered/127.0.0.1/index.html",
     "waterfall.ndjson"
   ],
   "fileHashes": {
+    "context.md": "bc43ccffa0b1b1dd7499c3699444549fe0ecdc8a3305eab5d8b198ff2ac1304e",
+    "navigable/_assets/127.0.0.1/index.html": "a5bd25532521900d119028ff35fcf79fc29efdf469dffa696d9e3a87057ce96c",
+    "navigable/_assets/127.0.0.1/wp-content/uploads/hero-placeholder.svg": "285ac72d39218b471540074bdffec0ffb1f036ebdd30b891dfd08c0a9f75bd47",
+    "navigable/index.html": "c86262c8d00e6a244e37bfcb39a8d420d7f686e5f30cee7a32bf4710985b3957",
     "study/raw/127.0.0.1/index.html": "a5bd25532521900d119028ff35fcf79fc29efdf469dffa696d9e3a87057ce96c",
     "study/raw/127.0.0.1/wp-content/uploads/hero-placeholder.svg": "285ac72d39218b471540074bdffec0ffb1f036ebdd30b891dfd08c0a9f75bd47",
     "study/rendered/127.0.0.1/index.html": "3cc12dd4002ea08fef31e2b69a442b183be9db2dca0f87bb5e278f1e20b90a5d"
@@ -15,6 +23,7 @@
   "manifest": {
     "result": "complete",
     "modes": [
+      "navigable",
       "study"
     ],
     "stats": {
@@ -36,13 +45,36 @@
       "skippedUrls": []
     },
     "errors": [],
+    "stack": {
+      "primary": "WordPress",
+      "detected": [
+        {
+          "name": "WordPress",
+          "confidence": 1,
+          "signals": [
+            "wp-content paths",
+            "wp-content asset paths",
+            "page-template-default body class",
+            "wp-* markup"
+          ]
+        },
+        {
+          "name": "Elementor",
+          "confidence": 0.82,
+          "signals": [
+            "elementor markup"
+          ]
+        }
+      ]
+    },
     "pages": [
       {
         "urlPath": "/",
         "title": "WordPress Fixture",
         "depth": 0,
         "status": 200,
-        "renderedPath": "study/rendered/127.0.0.1/index.html"
+        "renderedPath": "study/rendered/127.0.0.1/index.html",
+        "navigablePath": "navigable/index.html"
       }
     ],
     "assets": [
@@ -54,6 +86,7 @@
         "bytes": 558,
         "sha256": "a5bd25532521900d119028ff35fcf79fc29efdf469dffa696d9e3a87057ce96c",
         "rawPath": "study/raw/127.0.0.1/index.html",
+        "navigablePath": "navigable/_assets/127.0.0.1/index.html",
         "referrerPath": null,
         "viaJs": false,
         "fromCache": false
@@ -66,6 +99,7 @@
         "bytes": 259,
         "sha256": "285ac72d39218b471540074bdffec0ffb1f036ebdd30b891dfd08c0a9f75bd47",
         "rawPath": "study/raw/127.0.0.1/wp-content/uploads/hero-placeholder.svg",
+        "navigablePath": "navigable/_assets/127.0.0.1/wp-content/uploads/hero-placeholder.svg",
         "referrerPath": "/",
         "viaJs": false,
         "fromCache": false

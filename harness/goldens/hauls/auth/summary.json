@@ -1,18 +1,25 @@
 {
   "files": [
     "MANIFEST.json",
+    "context.md",
     "gnaw.log",
+    "navigable/_assets/127.0.0.1/index.html",
+    "navigable/index.html",
     "study/raw/127.0.0.1/index.html",
     "study/rendered/127.0.0.1/index.html",
     "waterfall.ndjson"
   ],
   "fileHashes": {
+    "context.md": "cc0eeeaf78fcbc7298e41b1a12b7c1af7e91d465016a871c5f9cd3be47826b36",
+    "navigable/_assets/127.0.0.1/index.html": "df094dac2ce0d1b2dc0ad1934172d6b68790022a88c4bc2c8a4473870100b638",
+    "navigable/index.html": "5bb83f606cf195b7d841d62bf0cf7e51298f932c9827be8600214979ea073d10",
     "study/raw/127.0.0.1/index.html": "df094dac2ce0d1b2dc0ad1934172d6b68790022a88c4bc2c8a4473870100b638",
     "study/rendered/127.0.0.1/index.html": "5bb83f606cf195b7d841d62bf0cf7e51298f932c9827be8600214979ea073d10"
   },
   "manifest": {
     "result": "complete",
     "modes": [
+      "navigable",
       "study"
     ],
     "stats": {
@@ -34,13 +41,18 @@
       "skippedUrls": []
     },
     "errors": [],
+    "stack": {
+      "primary": null,
+      "detected": []
+    },
     "pages": [
       {
         "urlPath": "/",
         "title": "Auth Fixture",
         "depth": 0,
         "status": 200,
-        "renderedPath": "study/rendered/127.0.0.1/index.html"
+        "renderedPath": "study/rendered/127.0.0.1/index.html",
+        "navigablePath": "navigable/index.html"
       }
     ],
     "assets": [
@@ -52,6 +64,7 @@
         "bytes": 721,
         "sha256": "df094dac2ce0d1b2dc0ad1934172d6b68790022a88c4bc2c8a4473870100b638",
         "rawPath": "study/raw/127.0.0.1/index.html",
+        "navigablePath": "navigable/_assets/127.0.0.1/index.html",
         "referrerPath": null,
         "viaJs": false,
         "fromCache": false

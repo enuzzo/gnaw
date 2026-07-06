@@ -1,4 +1,5 @@
 import type { AssetKind } from "../assets/classifyKind.js";
+import type { DetectedStack } from "../stack/detectStack.js";
 
 export type CaptureMode = "study" | "navigable";
 export type CaptureResult = "complete" | "partial" | "canceled";
@@ -34,7 +35,9 @@ export type ManifestAsset = {
   bytes: number;
   sha256: string;
   rawPath: string;
+  navigablePath?: string;
   beautifiedPath?: string;
+  sourceMapPath?: string;
   referrer: string | null;
   viaJs: boolean;
   fromCache: boolean;
@@ -70,6 +73,7 @@ export function buildManifest(input: {
   modes: CaptureMode[];
   config: CaptureConfig;
   browser?: string;
+  stack?: DetectedStack;
   pages: ManifestPage[];
   assets: ManifestAsset[];
   skippedUrls?: Array<{ url: string; reason: string }>;
@@ -91,7 +95,7 @@ export function buildManifest(input: {
     result: input.result,
     modes: input.modes,
     config: input.config,
-    stack: {
+    stack: input.stack ?? {
       primary: null,
       detected: []
     },

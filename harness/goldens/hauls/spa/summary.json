@@ -1,18 +1,25 @@
 {
   "files": [
     "MANIFEST.json",
+    "context.md",
     "gnaw.log",
+    "navigable/_assets/127.0.0.1/index.html",
+    "navigable/index.html",
     "study/raw/127.0.0.1/index.html",
     "study/rendered/127.0.0.1/index.html",
     "waterfall.ndjson"
   ],
   "fileHashes": {
+    "context.md": "8d85bc5e922b681a9d5dd6e1aa5c67e750e1a9c06b1523993e29cfccf668e764",
+    "navigable/_assets/127.0.0.1/index.html": "d136e302d2bee971cdd84a38b6613246625c24d720f08d0c50cdf244689b7c9e",
+    "navigable/index.html": "054ccac4810cff2e36454af4beecc5258d566e2ad86f4d49cee7600fc9583e60",
     "study/raw/127.0.0.1/index.html": "d136e302d2bee971cdd84a38b6613246625c24d720f08d0c50cdf244689b7c9e",
     "study/rendered/127.0.0.1/index.html": "054ccac4810cff2e36454af4beecc5258d566e2ad86f4d49cee7600fc9583e60"
   },
   "manifest": {
     "result": "complete",
     "modes": [
+      "navigable",
       "study"
     ],
     "stats": {
@@ -34,13 +41,26 @@
       "skippedUrls": []
     },
     "errors": [],
+    "stack": {
+      "primary": "Next.js",
+      "detected": [
+        {
+          "name": "Next.js",
+          "confidence": 0.92,
+          "signals": [
+            "window.__NEXT_DATA__"
+          ]
+        }
+      ]
+    },
     "pages": [
       {
         "urlPath": "/",
         "title": "SPA Fixture",
         "depth": 0,
         "status": 200,
-        "renderedPath": "study/rendered/127.0.0.1/index.html"
+        "renderedPath": "study/rendered/127.0.0.1/index.html",
+        "navigablePath": "navigable/index.html"
       }
     ],
     "assets": [
@@ -52,6 +72,7 @@
         "bytes": 460,
         "sha256": "d136e302d2bee971cdd84a38b6613246625c24d720f08d0c50cdf244689b7c9e",
         "rawPath": "study/raw/127.0.0.1/index.html",
+        "navigablePath": "navigable/_assets/127.0.0.1/index.html",
         "referrerPath": null,
         "viaJs": false,
         "fromCache": false

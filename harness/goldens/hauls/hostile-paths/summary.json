@@ -1,7 +1,14 @@
 {
   "files": [
     "MANIFEST.json",
+    "context.md",
     "gnaw.log",
+    "navigable/_assets/127.0.0.1/asset~q47553908.js",
+    "navigable/_assets/127.0.0.1/asset~qaa3f7410.js",
+    "navigable/_assets/127.0.0.1/index.html",
+    "navigable/index.html",
+    "study/beautified/127.0.0.1/asset~q47553908.js",
+    "study/beautified/127.0.0.1/asset~qaa3f7410.js",
     "study/raw/127.0.0.1/asset~q47553908.js",
     "study/raw/127.0.0.1/asset~qaa3f7410.js",
     "study/raw/127.0.0.1/index.html",
@@ -9,6 +16,13 @@
     "waterfall.ndjson"
   ],
   "fileHashes": {
+    "context.md": "e85bde3c8be526f3e3e4228c10ed5e75959d267eb8604b0eeb595321a0135283",
+    "navigable/_assets/127.0.0.1/asset~q47553908.js": "38ba0dd68d1d1c8d38f8c1bed0e7bfa2f2b27d9701139264306d02bd056c9756",
+    "navigable/_assets/127.0.0.1/asset~qaa3f7410.js": "38ba0dd68d1d1c8d38f8c1bed0e7bfa2f2b27d9701139264306d02bd056c9756",
+    "navigable/_assets/127.0.0.1/index.html": "c5feeb11a214f5e37cc387016d2ab8864263ef4c5bbe8caa84b55f5c979fb91f",
+    "navigable/index.html": "f03f9322c5ac3e9c1baf7819970de6d32ab78f252c1e17580cccca3456398600",
+    "study/beautified/127.0.0.1/asset~q47553908.js": "38ba0dd68d1d1c8d38f8c1bed0e7bfa2f2b27d9701139264306d02bd056c9756",
+    "study/beautified/127.0.0.1/asset~qaa3f7410.js": "38ba0dd68d1d1c8d38f8c1bed0e7bfa2f2b27d9701139264306d02bd056c9756",
     "study/raw/127.0.0.1/asset~q47553908.js": "38ba0dd68d1d1c8d38f8c1bed0e7bfa2f2b27d9701139264306d02bd056c9756",
     "study/raw/127.0.0.1/asset~qaa3f7410.js": "38ba0dd68d1d1c8d38f8c1bed0e7bfa2f2b27d9701139264306d02bd056c9756",
     "study/raw/127.0.0.1/index.html": "c5feeb11a214f5e37cc387016d2ab8864263ef4c5bbe8caa84b55f5c979fb91f",
@@ -17,6 +31,7 @@
   "manifest": {
     "result": "complete",
     "modes": [
+      "navigable",
       "study"
     ],
     "stats": {
@@ -38,13 +53,18 @@
       "skippedUrls": []
     },
     "errors": [],
+    "stack": {
+      "primary": null,
+      "detected": []
+    },
     "pages": [
       {
         "urlPath": "/",
         "title": "Hostile Paths Fixture",
         "depth": 0,
         "status": 200,
-        "renderedPath": "study/rendered/127.0.0.1/index.html"
+        "renderedPath": "study/rendered/127.0.0.1/index.html",
+        "navigablePath": "navigable/index.html"
       }
     ],
     "assets": [
@@ -56,6 +76,8 @@
         "bytes": 74,
         "sha256": "38ba0dd68d1d1c8d38f8c1bed0e7bfa2f2b27d9701139264306d02bd056c9756",
         "rawPath": "study/raw/127.0.0.1/asset~q47553908.js",
+        "navigablePath": "navigable/_assets/127.0.0.1/asset~q47553908.js",
+        "beautifiedPath": "study/beautified/127.0.0.1/asset~q47553908.js",
         "referrerPath": "/",
         "viaJs": false,
         "fromCache": false
@@ -68,6 +90,8 @@
         "bytes": 74,
         "sha256": "38ba0dd68d1d1c8d38f8c1bed0e7bfa2f2b27d9701139264306d02bd056c9756",
         "rawPath": "study/raw/127.0.0.1/asset~qaa3f7410.js",
+        "navigablePath": "navigable/_assets/127.0.0.1/asset~qaa3f7410.js",
+        "beautifiedPath": "study/beautified/127.0.0.1/asset~qaa3f7410.js",
         "referrerPath": "/",
         "viaJs": false,
         "fromCache": false
@@ -80,6 +104,7 @@
         "bytes": 797,
         "sha256": "c5feeb11a214f5e37cc387016d2ab8864263ef4c5bbe8caa84b55f5c979fb91f",
         "rawPath": "study/raw/127.0.0.1/index.html",
+        "navigablePath": "navigable/_assets/127.0.0.1/index.html",
         "referrerPath": null,
         "viaJs": false,
         "fromCache": false
