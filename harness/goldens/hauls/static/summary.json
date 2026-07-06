@@ -1,0 +1,191 @@
+{
+  "files": [
+    "MANIFEST.json",
+    "gnaw.log",
+    "study/raw/127.0.0.1/app.js",
+    "study/raw/127.0.0.1/index.html",
+    "study/raw/127.0.0.1/logo.svg",
+    "study/raw/127.0.0.1/style.css",
+    "study/raw/127.0.0.1/theme.css",
+    "study/rendered/127.0.0.1/index.html",
+    "waterfall.ndjson"
+  ],
+  "fileHashes": {
+    "study/raw/127.0.0.1/app.js": "1ccfbb1b7edeb8bea89ea0262e8c1bd45817f310ad83409141dd0eb7cb75fabe",
+    "study/raw/127.0.0.1/index.html": "bbf26ed9fb9ed4e2cab38508af7170502b41c09bef6de9d88ef4715a8a060086",
+    "study/raw/127.0.0.1/logo.svg": "b42e14989b074b738c5b13f8fb6bea9fe429ea90341592300e527c4523ecc982",
+    "study/raw/127.0.0.1/style.css": "e5bdecbe75886119aac78bb2d8d33811de67b71f2cf7ccbb6fb9849a0a05801c",
+    "study/raw/127.0.0.1/theme.css": "78a573e5cc84f1bebf03558cd73b4cffd485d04271234eab8bafeb220c35d0f6",
+    "study/rendered/127.0.0.1/index.html": "80a3adbce884abe5c4d1731fea7fd06d68a6fe2d277ee8af08988026f06a92c2"
+  },
+  "manifest": {
+    "result": "complete",
+    "modes": [
+      "study"
+    ],
+    "stats": {
+      "pages": 1,
+      "assets": 5,
+      "byKind": {
+        "HTML": 1,
+        "JS": 1,
+        "CSS": 2,
+        "IMG": 1,
+        "FONT": 0,
+        "JSON": 0,
+        "MEDIA": 0,
+        "WASM": 0,
+        "OTHER": 0
+      }
+    },
+    "safety": {
+      "skippedUrls": []
+    },
+    "errors": [],
+    "pages": [
+      {
+        "urlPath": "/",
+        "title": "Static Fixture",
+        "depth": 0,
+        "status": 200,
+        "renderedPath": "study/rendered/127.0.0.1/index.html"
+      }
+    ],
+    "assets": [
+      {
+        "urlPath": "/app.js",
+        "kind": "JS",
+        "status": 200,
+        "contentType": "text/javascript; charset=utf-8",
+        "bytes": 58,
+        "sha256": "1ccfbb1b7edeb8bea89ea0262e8c1bd45817f310ad83409141dd0eb7cb75fabe",
+        "rawPath": "study/raw/127.0.0.1/app.js",
+        "referrerPath": "/",
+        "viaJs": false,
+        "fromCache": false
+      },
+      {
+        "urlPath": "/",
+        "kind": "HTML",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "bytes": 557,
+        "sha256": "bbf26ed9fb9ed4e2cab38508af7170502b41c09bef6de9d88ef4715a8a060086",
+        "rawPath": "study/raw/127.0.0.1/index.html",
+        "referrerPath": null,
+        "viaJs": false,
+        "fromCache": false
+      },
+      {
+        "urlPath": "/logo.svg",
+        "kind": "IMG",
+        "status": 200,
+        "contentType": "image/svg+xml",
+        "bytes": 121,
+        "sha256": "b42e14989b074b738c5b13f8fb6bea9fe429ea90341592300e527c4523ecc982",
+        "rawPath": "study/raw/127.0.0.1/logo.svg",
+        "referrerPath": "/",
+        "viaJs": false,
+        "fromCache": false
+      },
+      {
+        "urlPath": "/style.css",
+        "kind": "CSS",
+        "status": 200,
+        "contentType": "text/css; charset=utf-8",
+        "bytes": 65,
+        "sha256": "e5bdecbe75886119aac78bb2d8d33811de67b71f2cf7ccbb6fb9849a0a05801c",
+        "rawPath": "study/raw/127.0.0.1/style.css",
+        "referrerPath": "/",
+        "viaJs": false,
+        "fromCache": false
+      },
+      {
+        "urlPath": "/theme.css",
+        "kind": "CSS",
+        "status": 200,
+        "contentType": "text/css; charset=utf-8",
+        "bytes": 33,
+        "sha256": "78a573e5cc84f1bebf03558cd73b4cffd485d04271234eab8bafeb220c35d0f6",
+        "rawPath": "study/raw/127.0.0.1/theme.css",
+        "referrerPath": "/",
+        "viaJs": false,
+        "fromCache": false
+      }
+    ]
+  },
+  "waterfall": {
+    "rowCount": 5,
+    "rows": [
+      {
+        "urlPath": "/",
+        "method": "GET",
+        "status": 200,
+        "kind": "HTML",
+        "contentType": "text/html; charset=utf-8",
+        "bytes": 557,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": null,
+        "pagePath": "/"
+      },
+      {
+        "urlPath": "/app.js",
+        "method": "GET",
+        "status": 200,
+        "kind": "JS",
+        "contentType": "text/javascript; charset=utf-8",
+        "bytes": 58,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": "/",
+        "pagePath": "/"
+      },
+      {
+        "urlPath": "/logo.svg",
+        "method": "GET",
+        "status": 200,
+        "kind": "IMG",
+        "contentType": "image/svg+xml",
+        "bytes": 121,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": "/",
+        "pagePath": "/"
+      },
+      {
+        "urlPath": "/style.css",
+        "method": "GET",
+        "status": 200,
+        "kind": "CSS",
+        "contentType": "text/css; charset=utf-8",
+        "bytes": 65,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": "/",
+        "pagePath": "/"
+      },
+      {
+        "urlPath": "/theme.css",
+        "method": "GET",
+        "status": 200,
+        "kind": "CSS",
+        "contentType": "text/css; charset=utf-8",
+        "bytes": 33,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": "/",
+        "pagePath": "/"
+      }
+    ]
+  },
+  "rendered": [
+    {
+      "path": "study/rendered/127.0.0.1/index.html",
+      "title": "Static Fixture",
+      "markers": [
+        "data-static-fixture=\"ready\""
+      ]
+    }
+  ]
+}

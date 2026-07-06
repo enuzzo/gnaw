@@ -56,7 +56,7 @@
     "contentType": "image/png",
     "expected": {
       "host": "example.com",
-      "relativePath": "example.com/Images/Logo~cfd5bd8d0.png"
+      "relativePath": "example.com/Images/Logo.png"
     }
   },
   {
@@ -65,7 +65,7 @@
     "contentType": "image/png",
     "expected": {
       "host": "example.com",
-      "relativePath": "example.com/images/logo.png"
+      "relativePath": "example.com/images/logo~cc5c6fbba.png"
     }
   },
   {

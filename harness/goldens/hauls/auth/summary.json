@@ -1,0 +1,85 @@
+{
+  "files": [
+    "MANIFEST.json",
+    "gnaw.log",
+    "study/raw/127.0.0.1/index.html",
+    "study/rendered/127.0.0.1/index.html",
+    "waterfall.ndjson"
+  ],
+  "fileHashes": {
+    "study/raw/127.0.0.1/index.html": "df094dac2ce0d1b2dc0ad1934172d6b68790022a88c4bc2c8a4473870100b638",
+    "study/rendered/127.0.0.1/index.html": "5bb83f606cf195b7d841d62bf0cf7e51298f932c9827be8600214979ea073d10"
+  },
+  "manifest": {
+    "result": "complete",
+    "modes": [
+      "study"
+    ],
+    "stats": {
+      "pages": 1,
+      "assets": 1,
+      "byKind": {
+        "HTML": 1,
+        "JS": 0,
+        "CSS": 0,
+        "IMG": 0,
+        "FONT": 0,
+        "JSON": 0,
+        "MEDIA": 0,
+        "WASM": 0,
+        "OTHER": 0
+      }
+    },
+    "safety": {
+      "skippedUrls": []
+    },
+    "errors": [],
+    "pages": [
+      {
+        "urlPath": "/",
+        "title": "Auth Fixture",
+        "depth": 0,
+        "status": 200,
+        "renderedPath": "study/rendered/127.0.0.1/index.html"
+      }
+    ],
+    "assets": [
+      {
+        "urlPath": "/",
+        "kind": "HTML",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "bytes": 721,
+        "sha256": "df094dac2ce0d1b2dc0ad1934172d6b68790022a88c4bc2c8a4473870100b638",
+        "rawPath": "study/raw/127.0.0.1/index.html",
+        "referrerPath": null,
+        "viaJs": false,
+        "fromCache": false
+      }
+    ]
+  },
+  "waterfall": {
+    "rowCount": 1,
+    "rows": [
+      {
+        "urlPath": "/",
+        "method": "GET",
+        "status": 200,
+        "kind": "HTML",
+        "contentType": "text/html; charset=utf-8",
+        "bytes": 721,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": null,
+        "pagePath": "/"
+      }
+    ]
+  },
+  "rendered": [
+    {
+      "path": "study/rendered/127.0.0.1/index.html",
+      "title": "Auth Fixture",
+      "markers": []
+    }
+  ]
+}

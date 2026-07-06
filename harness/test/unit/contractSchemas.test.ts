@@ -41,23 +41,8 @@ describe("contract schemas", () => {
   });
 
   it("accepts all stdout event types with v2 and forward-compatible fields", () => {
-    for (const type of [
-      "hello",
-      "browser",
-      "start",
-      "page_start",
-      "request",
-      "asset",
-      "page_done",
-      "stack",
-      "progress",
-      "skip",
-      "warning",
-      "error",
-      "state",
-      "done"
-    ]) {
-      expect(validateEvent({ v: 2, type, futureField: "allowed" }).valid).toBe(true);
+    for (const event of validEvents()) {
+      expect(validateEvent({ ...event, futureField: "allowed" }).valid).toBe(true);
     }
   });
 
@@ -65,6 +50,7 @@ describe("contract schemas", () => {
     expect(validateEvent("plain stdout text").valid).toBe(false);
     expect(validateEvent({ v: 1, type: "hello" }).valid).toBe(false);
     expect(validateEvent({ v: 2, type: "mystery" }).valid).toBe(false);
+    expect(validateEvent({ v: 2, type: "done", result: "complete" }).valid).toBe(false);
   });
 
   it("accepts request before asset event shapes", () => {
@@ -213,4 +199,110 @@ function validWaterfallRow() {
     referrer: "https://example.com/",
     page: "https://example.com/"
   };
+}
+
+function validEvents() {
+  return [
+    {
+      v: 2,
+      type: "hello",
+      engine: { name: "gnaw-playwright", version: "1.0.0" },
+      contract: "2.0"
+    },
+    {
+      v: 2,
+      type: "browser",
+      status: "found",
+      detail: "Playwright Chromium"
+    },
+    {
+      v: 2,
+      type: "start",
+      jobId: "j-test",
+      entrypoint: "http://127.0.0.1:43110/",
+      modes: ["study"],
+      config: {},
+      haulPath: "/tmp/haul"
+    },
+    {
+      v: 2,
+      type: "page_start",
+      url: "http://127.0.0.1:43110/",
+      depth: 0
+    },
+    {
+      v: 2,
+      type: "request",
+      id: "r-0001",
+      url: "http://127.0.0.1:43110/app.js",
+      method: "GET"
+    },
+    {
+      v: 2,
+      type: "asset",
+      id: "r-0001",
+      url: "http://127.0.0.1:43110/app.js",
+      kind: "JS",
+      bytes: 42,
+      status: 200,
+      fromCache: false,
+      viaJs: false,
+      rawPath: "study/raw/127.0.0.1/app.js"
+    },
+    {
+      v: 2,
+      type: "page_done",
+      url: "http://127.0.0.1:43110/",
+      title: "Static Fixture",
+      assets: 1
+    },
+    {
+      v: 2,
+      type: "stack",
+      primary: "Next.js",
+      detected: [{ name: "Next.js", confidence: 0.92, signals: ["__NEXT_DATA__"] }]
+    },
+    {
+      v: 2,
+      type: "progress",
+      pages: 1,
+      assets: 1,
+      bytes: 42,
+      queued: 0,
+      elapsedMs: 100
+    },
+    {
+      v: 2,
+      type: "skip",
+      url: "http://127.0.0.1:43110/logout",
+      reason: "blocked_pattern"
+    },
+    {
+      v: 2,
+      type: "warning",
+      code: "asset_too_large",
+      url: "http://127.0.0.1:43110/video.mp4",
+      message: "Skipped 212 MB video"
+    },
+    {
+      v: 2,
+      type: "error",
+      code: "nav_timeout",
+      url: "http://127.0.0.1:43110/slow",
+      message: "Navigation timed out",
+      fatal: false
+    },
+    {
+      v: 2,
+      type: "state",
+      state: "paused"
+    },
+    {
+      v: 2,
+      type: "done",
+      result: "complete",
+      summary: { pages: 1, assets: 1, bytes: 42, durationMs: 100 },
+      haulPath: "/tmp/haul"
+    }
+  ];
 }

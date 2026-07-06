@@ -1,0 +1,111 @@
+{
+  "files": [
+    "MANIFEST.json",
+    "gnaw.log",
+    "study/raw/127.0.0.1/index.html",
+    "study/raw/127.0.0.1/wp-content/uploads/hero-placeholder.svg",
+    "study/rendered/127.0.0.1/index.html",
+    "waterfall.ndjson"
+  ],
+  "fileHashes": {
+    "study/raw/127.0.0.1/index.html": "a5bd25532521900d119028ff35fcf79fc29efdf469dffa696d9e3a87057ce96c",
+    "study/raw/127.0.0.1/wp-content/uploads/hero-placeholder.svg": "285ac72d39218b471540074bdffec0ffb1f036ebdd30b891dfd08c0a9f75bd47",
+    "study/rendered/127.0.0.1/index.html": "3cc12dd4002ea08fef31e2b69a442b183be9db2dca0f87bb5e278f1e20b90a5d"
+  },
+  "manifest": {
+    "result": "complete",
+    "modes": [
+      "study"
+    ],
+    "stats": {
+      "pages": 1,
+      "assets": 2,
+      "byKind": {
+        "HTML": 1,
+        "JS": 0,
+        "CSS": 0,
+        "IMG": 1,
+        "FONT": 0,
+        "JSON": 0,
+        "MEDIA": 0,
+        "WASM": 0,
+        "OTHER": 0
+      }
+    },
+    "safety": {
+      "skippedUrls": []
+    },
+    "errors": [],
+    "pages": [
+      {
+        "urlPath": "/",
+        "title": "WordPress Fixture",
+        "depth": 0,
+        "status": 200,
+        "renderedPath": "study/rendered/127.0.0.1/index.html"
+      }
+    ],
+    "assets": [
+      {
+        "urlPath": "/",
+        "kind": "HTML",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "bytes": 558,
+        "sha256": "a5bd25532521900d119028ff35fcf79fc29efdf469dffa696d9e3a87057ce96c",
+        "rawPath": "study/raw/127.0.0.1/index.html",
+        "referrerPath": null,
+        "viaJs": false,
+        "fromCache": false
+      },
+      {
+        "urlPath": "/wp-content/uploads/hero-placeholder.svg",
+        "kind": "IMG",
+        "status": 200,
+        "contentType": "image/svg+xml",
+        "bytes": 259,
+        "sha256": "285ac72d39218b471540074bdffec0ffb1f036ebdd30b891dfd08c0a9f75bd47",
+        "rawPath": "study/raw/127.0.0.1/wp-content/uploads/hero-placeholder.svg",
+        "referrerPath": "/",
+        "viaJs": false,
+        "fromCache": false
+      }
+    ]
+  },
+  "waterfall": {
+    "rowCount": 2,
+    "rows": [
+      {
+        "urlPath": "/",
+        "method": "GET",
+        "status": 200,
+        "kind": "HTML",
+        "contentType": "text/html; charset=utf-8",
+        "bytes": 558,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": null,
+        "pagePath": "/"
+      },
+      {
+        "urlPath": "/wp-content/uploads/hero-placeholder.svg",
+        "method": "GET",
+        "status": 200,
+        "kind": "IMG",
+        "contentType": "image/svg+xml",
+        "bytes": 259,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": "/",
+        "pagePath": "/"
+      }
+    ]
+  },
+  "rendered": [
+    {
+      "path": "study/rendered/127.0.0.1/index.html",
+      "title": "WordPress Fixture",
+      "markers": []
+    }
+  ]
+}

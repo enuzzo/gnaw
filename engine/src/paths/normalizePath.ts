@@ -13,12 +13,14 @@ export function createPathNormalizer(): {
   normalizeRendered(url: string): NormalizedPath;
   normalizeAsset(url: string, contentType: string | null): NormalizedPath;
 } {
+  const caseFoldedPaths = new Map<string, string>();
+
   function normalize(url: string, mode: NormalizerMode, contentType: string | null): NormalizedPath {
     const originalUrl = stripFragment(url);
     const parsed = new URL(originalUrl);
     const host = sanitizeSegment(parsed.hostname.toLowerCase());
     const pathParts = buildPathParts(parsed, mode, contentType);
-    const relativePath = applyDeterministicCollisionSuffix([host, ...pathParts].join("/"), originalUrl);
+    const relativePath = applyCaseCollisionSuffix(caseFoldedPaths, [host, ...pathParts].join("/"), originalUrl);
 
     return { host, relativePath };
   }
@@ -123,12 +125,22 @@ function truncateSegment(segment: string): string {
   return `${segment.slice(0, 80)}~${hash8(segment)}`;
 }
 
-function applyDeterministicCollisionSuffix(relativePath: string, originalUrl: string): string {
-  if (!/[A-Z]/.test(relativePath)) {
+function applyCaseCollisionSuffix(caseFoldedPaths: Map<string, string>, relativePath: string, originalUrl: string): string {
+  const folded = relativePath.toLowerCase();
+  const existing = caseFoldedPaths.get(folded);
+
+  if (existing === undefined) {
+    caseFoldedPaths.set(folded, relativePath);
     return relativePath;
   }
 
-  return capFinalSegment(appendSuffixBeforeExtension(relativePath, `~c${hash8(originalUrl)}`));
+  if (existing === relativePath) {
+    return relativePath;
+  }
+
+  const suffixed = capFinalSegment(appendSuffixBeforeExtension(relativePath, `~c${hash8(originalUrl)}`));
+  caseFoldedPaths.set(suffixed.toLowerCase(), suffixed);
+  return suffixed;
 }
 
 function capFinalSegment(filePath: string): string {

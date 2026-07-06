@@ -36,11 +36,13 @@ export type CaptureController = {
 export function createCaptureController({
   stdin,
   writer,
-  logger
+  logger,
+  onCancel
 }: {
   stdin?: Readable;
   writer: ControlEventWriter;
   logger: ControlLogger;
+  onCancel?: () => void;
 }): CaptureController {
   let state: CaptureControlState = "running";
   const waiters = new Set<() => void>();
@@ -78,6 +80,8 @@ export function createCaptureController({
       return;
     }
     state = "canceled";
+    emitState();
+    onCancel?.();
     resolveWaiters();
   }
 

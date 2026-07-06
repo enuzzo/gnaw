@@ -1,0 +1,111 @@
+{
+  "files": [
+    "MANIFEST.json",
+    "gnaw.log",
+    "study/raw/127.0.0.1/assets/lazy-placeholder.svg",
+    "study/raw/127.0.0.1/index.html",
+    "study/rendered/127.0.0.1/index.html",
+    "waterfall.ndjson"
+  ],
+  "fileHashes": {
+    "study/raw/127.0.0.1/assets/lazy-placeholder.svg": "1edfad6e7d86346c03566a8e644bf079bc554a0bfe5aafe1258d51b9db63b6d0",
+    "study/raw/127.0.0.1/index.html": "f8203e2d915008df555a80bf4ca5b1fa8da2d3f6fca7ab0ca5337ecfd6753ee5",
+    "study/rendered/127.0.0.1/index.html": "7dab24d8c72761e8d804ad1f22a94af45cfebaa7f4216353ae01f3e95a3df9ef"
+  },
+  "manifest": {
+    "result": "complete",
+    "modes": [
+      "study"
+    ],
+    "stats": {
+      "pages": 1,
+      "assets": 2,
+      "byKind": {
+        "HTML": 1,
+        "JS": 0,
+        "CSS": 0,
+        "IMG": 1,
+        "FONT": 0,
+        "JSON": 0,
+        "MEDIA": 0,
+        "WASM": 0,
+        "OTHER": 0
+      }
+    },
+    "safety": {
+      "skippedUrls": []
+    },
+    "errors": [],
+    "pages": [
+      {
+        "urlPath": "/",
+        "title": "Lazy Fixture",
+        "depth": 0,
+        "status": 200,
+        "renderedPath": "study/rendered/127.0.0.1/index.html"
+      }
+    ],
+    "assets": [
+      {
+        "urlPath": "/assets/lazy-placeholder.svg",
+        "kind": "IMG",
+        "status": 200,
+        "contentType": "image/svg+xml",
+        "bytes": 220,
+        "sha256": "1edfad6e7d86346c03566a8e644bf079bc554a0bfe5aafe1258d51b9db63b6d0",
+        "rawPath": "study/raw/127.0.0.1/assets/lazy-placeholder.svg",
+        "referrerPath": "/",
+        "viaJs": false,
+        "fromCache": false
+      },
+      {
+        "urlPath": "/",
+        "kind": "HTML",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "bytes": 575,
+        "sha256": "f8203e2d915008df555a80bf4ca5b1fa8da2d3f6fca7ab0ca5337ecfd6753ee5",
+        "rawPath": "study/raw/127.0.0.1/index.html",
+        "referrerPath": null,
+        "viaJs": false,
+        "fromCache": false
+      }
+    ]
+  },
+  "waterfall": {
+    "rowCount": 2,
+    "rows": [
+      {
+        "urlPath": "/",
+        "method": "GET",
+        "status": 200,
+        "kind": "HTML",
+        "contentType": "text/html; charset=utf-8",
+        "bytes": 575,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": null,
+        "pagePath": "/"
+      },
+      {
+        "urlPath": "/assets/lazy-placeholder.svg",
+        "method": "GET",
+        "status": 200,
+        "kind": "IMG",
+        "contentType": "image/svg+xml",
+        "bytes": 220,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": "/",
+        "pagePath": "/"
+      }
+    ]
+  },
+  "rendered": [
+    {
+      "path": "study/rendered/127.0.0.1/index.html",
+      "title": "Lazy Fixture",
+      "markers": []
+    }
+  ]
+}

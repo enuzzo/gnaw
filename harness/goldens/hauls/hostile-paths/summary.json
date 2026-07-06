@@ -1,0 +1,137 @@
+{
+  "files": [
+    "MANIFEST.json",
+    "gnaw.log",
+    "study/raw/127.0.0.1/asset~q47553908.js",
+    "study/raw/127.0.0.1/asset~qaa3f7410.js",
+    "study/raw/127.0.0.1/index.html",
+    "study/rendered/127.0.0.1/index.html",
+    "waterfall.ndjson"
+  ],
+  "fileHashes": {
+    "study/raw/127.0.0.1/asset~q47553908.js": "38ba0dd68d1d1c8d38f8c1bed0e7bfa2f2b27d9701139264306d02bd056c9756",
+    "study/raw/127.0.0.1/asset~qaa3f7410.js": "38ba0dd68d1d1c8d38f8c1bed0e7bfa2f2b27d9701139264306d02bd056c9756",
+    "study/raw/127.0.0.1/index.html": "c5feeb11a214f5e37cc387016d2ab8864263ef4c5bbe8caa84b55f5c979fb91f",
+    "study/rendered/127.0.0.1/index.html": "288d664006f6839e9ea7889d65a004eb6792fbcfc53b6446c9bba947c5b7bf5e"
+  },
+  "manifest": {
+    "result": "complete",
+    "modes": [
+      "study"
+    ],
+    "stats": {
+      "pages": 1,
+      "assets": 3,
+      "byKind": {
+        "HTML": 1,
+        "JS": 2,
+        "CSS": 0,
+        "IMG": 0,
+        "FONT": 0,
+        "JSON": 0,
+        "MEDIA": 0,
+        "WASM": 0,
+        "OTHER": 0
+      }
+    },
+    "safety": {
+      "skippedUrls": []
+    },
+    "errors": [],
+    "pages": [
+      {
+        "urlPath": "/",
+        "title": "Hostile Paths Fixture",
+        "depth": 0,
+        "status": 200,
+        "renderedPath": "study/rendered/127.0.0.1/index.html"
+      }
+    ],
+    "assets": [
+      {
+        "urlPath": "/asset.js?v=two",
+        "kind": "JS",
+        "status": 200,
+        "contentType": "text/javascript; charset=utf-8",
+        "bytes": 74,
+        "sha256": "38ba0dd68d1d1c8d38f8c1bed0e7bfa2f2b27d9701139264306d02bd056c9756",
+        "rawPath": "study/raw/127.0.0.1/asset~q47553908.js",
+        "referrerPath": "/",
+        "viaJs": false,
+        "fromCache": false
+      },
+      {
+        "urlPath": "/asset.js?v=one",
+        "kind": "JS",
+        "status": 200,
+        "contentType": "text/javascript; charset=utf-8",
+        "bytes": 74,
+        "sha256": "38ba0dd68d1d1c8d38f8c1bed0e7bfa2f2b27d9701139264306d02bd056c9756",
+        "rawPath": "study/raw/127.0.0.1/asset~qaa3f7410.js",
+        "referrerPath": "/",
+        "viaJs": false,
+        "fromCache": false
+      },
+      {
+        "urlPath": "/",
+        "kind": "HTML",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "bytes": 797,
+        "sha256": "c5feeb11a214f5e37cc387016d2ab8864263ef4c5bbe8caa84b55f5c979fb91f",
+        "rawPath": "study/raw/127.0.0.1/index.html",
+        "referrerPath": null,
+        "viaJs": false,
+        "fromCache": false
+      }
+    ]
+  },
+  "waterfall": {
+    "rowCount": 3,
+    "rows": [
+      {
+        "urlPath": "/",
+        "method": "GET",
+        "status": 200,
+        "kind": "HTML",
+        "contentType": "text/html; charset=utf-8",
+        "bytes": 797,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": null,
+        "pagePath": "/"
+      },
+      {
+        "urlPath": "/asset.js?v=one",
+        "method": "GET",
+        "status": 200,
+        "kind": "JS",
+        "contentType": "text/javascript; charset=utf-8",
+        "bytes": 74,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": "/",
+        "pagePath": "/"
+      },
+      {
+        "urlPath": "/asset.js?v=two",
+        "method": "GET",
+        "status": 200,
+        "kind": "JS",
+        "contentType": "text/javascript; charset=utf-8",
+        "bytes": 74,
+        "fromCache": false,
+        "viaJs": false,
+        "referrerPath": "/",
+        "pagePath": "/"
+      }
+    ]
+  },
+  "rendered": [
+    {
+      "path": "study/rendered/127.0.0.1/index.html",
+      "title": "Hostile Paths Fixture",
+      "markers": []
+    }
+  ]
+}

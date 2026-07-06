@@ -56,23 +56,16 @@ describe("path normalizer", () => {
     });
   });
 
-  it("suffixes APFS case-insensitive collisions deterministically without deduping", () => {
+  it("suffixes APFS case-insensitive collisions only after a conflicting path is seen", () => {
     const normalizer = createPathNormalizer();
-    const upperUrl = "https://example.com/Images/Logo.png";
-    const first = normalizer.normalizeAsset(
-      upperUrl,
-      null,
-    );
-    const secondUrl = "https://example.com/images/logo.png";
-    const second = normalizer.normalizeAsset(secondUrl, null);
-    const reverse = createPathNormalizer();
-    const reverseSecond = reverse.normalizeAsset(secondUrl, null);
-    const reverseFirst = reverse.normalizeAsset(upperUrl, null);
+    const loneUpperUrl = "https://example.com/Images/Icon.png";
+    expect(normalizer.normalizeAsset(loneUpperUrl, null).relativePath).toBe("example.com/Images/Icon.png");
 
-    expect(first.relativePath).toBe(`example.com/Images/Logo~c${hash8(upperUrl)}.png`);
-    expect(second.relativePath).toBe("example.com/images/logo.png");
-    expect(reverseFirst.relativePath).toBe(first.relativePath);
-    expect(reverseSecond.relativePath).toBe(second.relativePath);
+    const lowerUrl = "https://example.com/images/logo.png";
+    expect(normalizer.normalizeAsset(lowerUrl, null).relativePath).toBe("example.com/images/logo.png");
+
+    const upperUrl = "https://example.com/Images/Logo.png";
+    expect(normalizer.normalizeAsset(upperUrl, null).relativePath).toBe(`example.com/Images/Logo~c${hash8(upperUrl)}.png`);
   });
 
   it("truncates path segments longer than 100 characters", () => {
@@ -112,8 +105,10 @@ describe("path normalizer", () => {
       relativePath: `example.com/${fullQueryName.slice(0, 80)}~${hash8(fullQueryName)}`,
     });
 
+    const firstFile = `${"a".repeat(96)}.png`;
     const upperFile = `${"A".repeat(96)}.png`;
     const upperUrl = `https://example.com/${upperFile}`;
+    normalizer.normalizeAsset(`https://example.com/${firstFile}`, "image/png");
     const fullCaseName = `${"A".repeat(96)}~c${hash8(upperUrl)}.png`;
 
     expect(normalizer.normalizeAsset(upperUrl, "image/png")).toEqual({

@@ -23,7 +23,20 @@ describe("manifest builder", () => {
           renderedPath: "study/rendered/127.0.0.1/index.html"
         }
       ],
-      assets: []
+      assets: [
+        {
+          url: "http://127.0.0.1:43110/",
+          kind: "HTML",
+          status: 200,
+          contentType: "text/html",
+          bytes: 10,
+          sha256: "abc123",
+          rawPath: "study/raw/127.0.0.1/index.html",
+          referrer: null,
+          viaJs: false,
+          fromCache: false
+        }
+      ]
     });
 
     expect(manifest.schemaVersion).toBe(2);
@@ -50,6 +63,8 @@ describe("manifest builder", () => {
       WASM: 0,
       OTHER: 0
     });
+    expect(manifest.stats.assets).toBe(1);
+    expect(manifest.stats.bytes).toBe(10);
     expect(validateManifest(manifest).valid).toBe(true);
   });
 });

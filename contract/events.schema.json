@@ -27,5 +27,184 @@
       ]
     }
   },
-  "additionalProperties": true
+  "oneOf": [
+    {
+      "required": ["engine", "contract"],
+      "properties": {
+        "type": { "const": "hello" },
+        "engine": {
+          "type": "object",
+          "required": ["name", "version"],
+          "properties": {
+            "name": { "type": "string" },
+            "version": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "contract": { "type": "string" }
+      }
+    },
+    {
+      "required": ["status"],
+      "properties": {
+        "type": { "const": "browser" },
+        "status": { "type": "string", "enum": ["found", "downloading"] },
+        "detail": { "type": "string" },
+        "progress": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    {
+      "required": ["jobId", "entrypoint", "modes", "config", "haulPath"],
+      "properties": {
+        "type": { "const": "start" },
+        "jobId": { "type": "string" },
+        "entrypoint": { "type": "string" },
+        "modes": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["study", "navigable"] },
+          "minItems": 1
+        },
+        "config": { "type": "object" },
+        "haulPath": { "type": "string" }
+      }
+    },
+    {
+      "required": ["url", "depth"],
+      "properties": {
+        "type": { "const": "page_start" },
+        "url": { "type": "string" },
+        "depth": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "required": ["id", "url", "method"],
+      "properties": {
+        "type": { "const": "request" },
+        "id": { "type": "string" },
+        "url": { "type": "string" },
+        "method": { "type": "string", "enum": ["GET"] }
+      }
+    },
+    {
+      "required": ["id", "url", "kind", "bytes", "status", "fromCache", "viaJs", "rawPath"],
+      "properties": {
+        "type": { "const": "asset" },
+        "id": { "type": "string" },
+        "url": { "type": "string" },
+        "kind": { "$ref": "#/$defs/kind" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "status": { "type": "integer", "minimum": 0 },
+        "fromCache": { "type": "boolean" },
+        "viaJs": { "type": "boolean" },
+        "rawPath": { "type": "string" }
+      }
+    },
+    {
+      "required": ["url", "title", "assets"],
+      "properties": {
+        "type": { "const": "page_done" },
+        "url": { "type": "string" },
+        "title": { "type": "string" },
+        "assets": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "required": ["primary", "detected"],
+      "properties": {
+        "type": { "const": "stack" },
+        "primary": { "type": ["string", "null"] },
+        "detected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "confidence", "signals"],
+            "properties": {
+              "name": { "type": "string" },
+              "confidence": { "type": "number", "minimum": 0 },
+              "signals": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "required": ["pages", "assets", "bytes", "queued", "elapsedMs"],
+      "properties": {
+        "type": { "const": "progress" },
+        "pages": { "type": "integer", "minimum": 0 },
+        "assets": { "type": "integer", "minimum": 0 },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "queued": { "type": "integer", "minimum": 0 },
+        "elapsedMs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "required": ["url", "reason"],
+      "properties": {
+        "type": { "const": "skip" },
+        "url": { "type": "string" },
+        "reason": {
+          "type": "string",
+          "enum": ["blocked_pattern", "out_of_scope", "robots", "max_pages", "max_depth"]
+        }
+      }
+    },
+    {
+      "required": ["code", "message"],
+      "properties": {
+        "type": { "const": "warning" },
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "url": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    },
+    {
+      "required": ["code", "message", "fatal"],
+      "properties": {
+        "type": { "const": "error" },
+        "code": { "type": "string" },
+        "url": { "type": "string" },
+        "message": { "type": "string" },
+        "fatal": { "type": "boolean" }
+      }
+    },
+    {
+      "required": ["state"],
+      "properties": {
+        "type": { "const": "state" },
+        "state": { "type": "string", "enum": ["running", "paused", "canceled"] }
+      }
+    },
+    {
+      "required": ["result", "summary", "haulPath"],
+      "properties": {
+        "type": { "const": "done" },
+        "result": { "type": "string", "enum": ["complete", "partial", "canceled"] },
+        "summary": {
+          "type": "object",
+          "required": ["pages", "assets", "bytes"],
+          "properties": {
+            "pages": { "type": "integer", "minimum": 0 },
+            "assets": { "type": "integer", "minimum": 0 },
+            "bytes": { "type": "integer", "minimum": 0 },
+            "durationMs": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": true
+        },
+        "haulPath": { "type": "string" }
+      }
+    }
+  ],
+  "additionalProperties": true,
+  "$defs": {
+    "kind": {
+      "type": "string",
+      "enum": ["HTML", "JS", "CSS", "IMG", "FONT", "JSON", "MEDIA", "WASM", "OTHER"]
+    }
+  }
 }

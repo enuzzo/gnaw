@@ -1,4 +1,4 @@
-import type { AssetKind } from "../assets/classifyKind";
+import type { AssetKind } from "../assets/classifyKind.js";
 
 export type CaptureMode = "study" | "navigable";
 export type CaptureResult = "complete" | "partial" | "canceled";
@@ -69,6 +69,7 @@ export function buildManifest(input: {
   result: CaptureResult;
   modes: CaptureMode[];
   config: CaptureConfig;
+  browser?: string;
   pages: ManifestPage[];
   assets: ManifestAsset[];
   skippedUrls?: Array<{ url: string; reason: string }>;
@@ -80,7 +81,7 @@ export function buildManifest(input: {
     engine: {
       name: "gnaw-playwright",
       version: "1.0.0",
-      browser: "unknown"
+      browser: input.browser ?? "unknown"
     },
     entrypoint: input.entrypoint,
     host: input.host,
@@ -109,9 +110,8 @@ export function buildManifest(input: {
   };
 }
 
-function countByKind(pages: ManifestPage[], assets: ManifestAsset[]): Record<AssetKind, number> {
+function countByKind(_pages: ManifestPage[], assets: ManifestAsset[]): Record<AssetKind, number> {
   const counts = Object.fromEntries(kinds.map((kind) => [kind, 0])) as Record<AssetKind, number>;
-  counts.HTML = pages.length;
 
   for (const asset of assets) {
     counts[asset.kind] += 1;
