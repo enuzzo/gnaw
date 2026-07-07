@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { writeFile } from "node:fs/promises";
 import type { Readable, Writable } from "node:stream";
 import { pathToFileURL } from "node:url";
 import { createCaptureController } from "./capture/controller.js";
@@ -7,6 +8,8 @@ import { captureSite, type CaptureOptions, type CaptureResult } from "./capture/
 import { createProfileStore, type ListedProfile, type ProfileMetadata, type ProfileStore } from "./auth/profiles.js";
 import { loginProfile } from "./auth/login.js";
 import { buildBlockPatterns } from "./safety/blocklist.js";
+import { analyzeScenario } from "./scenario/analyze.js";
+import { renderScenarioReport } from "./scenario/report.js";
 export { engineIdentity } from "./identity.js";
 
 export type AuthLogin = (options: { url: string; profileName: string; store: ProfileStore }) => Promise<ProfileMetadata>;
@@ -111,6 +114,38 @@ export function createCliProgram({
     writer.event({ v: 2, type: "auth_deleted", profileName: name });
     writer.log(`Deleted auth profile ${name}`);
   });
+
+  const scenario = program.command("scenario");
+
+  scenario
+    .command("analyze")
+    .requiredOption("--network <path>", "scenario network NDJSON path")
+    .option("--body <path>", "response body path to scan for gates and errors", collect, [])
+    .option("--out <path>", "write markdown report to this path")
+    .action(async (options: { network: string; body?: string[]; out?: string }) => {
+      const writer = createEventWriter({ stdout, stderr });
+      const analysis = await analyzeScenario({
+        networkLogPath: options.network,
+        responseBodyPaths: options.body ?? []
+      });
+      const report = renderScenarioReport(analysis);
+      if (options.out) {
+        await writeFile(options.out, report, "utf8");
+        writer.log(`Wrote scenario report ${options.out}`);
+      } else {
+        writer.log(report.trimEnd());
+      }
+      writer.event({
+        v: 2,
+        type: "scenario_analysis",
+        networkLogPath: analysis.networkLogPath,
+        reportPath: options.out ?? null,
+        authRequired: analysis.authGate.required,
+        jobIds: analysis.jobIds,
+        countsByKind: analysis.countsByKind,
+        malformedRows: analysis.malformedRows
+      });
+    });
 
   return program;
 }

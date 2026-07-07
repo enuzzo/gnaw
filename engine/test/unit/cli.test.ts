@@ -1,20 +1,39 @@
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { PassThrough, Writable } from "node:stream";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { isCliEntrypoint, runCli, createCliProgram } from "../../src/cli";
 import type { ProfileStore } from "../../src/auth/profiles";
 
 describe("CLI surface", () => {
+  const tmpRoots: string[] = [];
+
+  afterEach(async () => {
+    await Promise.all(tmpRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+  });
+
+  async function tempRoot(): Promise<string> {
+    const root = await mkdtemp(join(tmpdir(), "gnaw-cli-"));
+    tmpRoots.push(root);
+    return root;
+  }
+
   it("registers capture and auth commands", () => {
     const program = createCliProgram();
 
     expect(program.commands.map((command) => command.name()).sort()).toEqual([
       "auth",
-      "capture"
+      "capture",
+      "scenario"
     ]);
     expect(program.commands.find((command) => command.name() === "auth")?.commands.map((command) => command.name()).sort()).toEqual([
       "delete",
       "list",
       "login"
+    ]);
+    expect(program.commands.find((command) => command.name() === "scenario")?.commands.map((command) => command.name()).sort()).toEqual([
+      "analyze"
     ]);
   });
 
@@ -253,6 +272,55 @@ describe("CLI surface", () => {
     expect(stderr.join("")).toBe("Deleted auth profile client-a\nSaved auth profile client-b\n");
     expect(deleted).toEqual(["client-a"]);
     expect(loginStore).toBe(profileStore);
+  });
+
+  it("runs scenario analysis and writes a markdown report", async () => {
+    const root = await tempRoot();
+    const networkPath = join(root, "network.ndjson");
+    const bodyPath = join(root, "auth.json");
+    const reportPath = join(root, "report.md");
+    await writeFile(
+      networkPath,
+      [
+        JSON.stringify({ type: "response", method: "POST", url: "https://example.test/upload?shape=square", status: 200, contentType: "application/json" }),
+        JSON.stringify({ type: "response", method: "GET", url: "https://example.test/download/job-1/3mf", status: 401, contentType: "application/json" })
+      ].join("\n"),
+      "utf8"
+    );
+    await writeFile(bodyPath, '{"kind":"auth_required"}', "utf8");
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const program = createCliProgram({
+      stdout: captureStream(stdout),
+      stderr: captureStream(stderr)
+    });
+
+    await program.parseAsync([
+      "node",
+      "gnaw",
+      "scenario",
+      "analyze",
+      "--network",
+      networkPath,
+      "--body",
+      bodyPath,
+      "--out",
+      reportPath
+    ]);
+
+    expect(JSON.parse(stdout.join("").trim())).toMatchObject({
+      v: 2,
+      type: "scenario_analysis",
+      reportPath,
+      authRequired: true,
+      countsByKind: {
+        generate: 1,
+        download: 1
+      }
+    });
+    expect(stderr.join("")).toBe(`Wrote scenario report ${reportPath}\n`);
+    expect(await readFile(reportPath, "utf8")).toContain("Auth gate: required");
   });
 });
 

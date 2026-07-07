@@ -100,10 +100,13 @@ Supported event types:
 - `done`
 - `auth_profile`
 - `auth_deleted`
+- `scenario_analysis`
 
 Extra fields are allowed for forward compatibility. Consumers ignore fields and event types they do not understand. `request` precedes `asset` with the same `id` so the GUI can render in-flight waterfall rows. `progress` is authoritative for totals and is throttled to at most four events per second.
 
 `auth_profile` reports profile metadata only: profile name, last verified URL, timestamp, and lock state. `auth_deleted` reports the deleted profile name. Neither event carries cookies, storage values, authorization headers, or tokens.
+
+`scenario_analysis` reports dynamic-site study metadata only: network log path, report path, auth-gate boolean, observed job IDs, endpoint-kind counts, and malformed JSONL row count. It must not include response bodies, cookies, headers, storage values, credentials, or tokens.
 
 `skip.reason` values are `blocked_pattern`, `out_of_scope`, `robots`, `max_pages`, and `max_depth`. Stable error codes include `nav_timeout`, `dns`, `tls`, `http_error`, `write_failed`, `browser_crash`, `profile_locked`, and `profile_not_found`. `fatal: true` means the job is ending, but a `done` event still follows whenever a manifest could be written.
 

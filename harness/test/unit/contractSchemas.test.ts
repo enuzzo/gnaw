@@ -344,6 +344,28 @@ function validEvents() {
       result: "complete",
       summary: { pages: 1, assets: 1, bytes: 42, durationMs: 100 },
       haulPath: "/tmp/haul"
+    },
+    {
+      v: 2,
+      type: "scenario_analysis",
+      networkLogPath: "output/example/network.ndjson",
+      reportPath: "output/example/scenario-report.md",
+      authRequired: true,
+      jobIds: ["job-123"],
+      countsByKind: {
+        page: 1,
+        asset: 0,
+        api: 0,
+        parse: 1,
+        generate: 1,
+        status: 1,
+        preview: 2,
+        downloadIntent: 1,
+        download: 1,
+        auth: 0,
+        unknown: 0
+      },
+      malformedRows: 0
     }
   ];
 }

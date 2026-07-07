@@ -25,7 +25,8 @@
         "state",
         "done",
         "auth_profile",
-        "auth_deleted"
+        "auth_deleted",
+        "scenario_analysis"
       ]
     }
   },
@@ -216,6 +217,38 @@
       "properties": {
         "type": { "const": "auth_deleted" },
         "profileName": { "type": "string" }
+      }
+    },
+    {
+      "required": ["networkLogPath", "reportPath", "authRequired", "jobIds", "countsByKind", "malformedRows"],
+      "properties": {
+        "type": { "const": "scenario_analysis" },
+        "networkLogPath": { "type": "string" },
+        "reportPath": { "type": ["string", "null"] },
+        "authRequired": { "type": "boolean" },
+        "jobIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "countsByKind": {
+          "type": "object",
+          "required": ["page", "asset", "api", "parse", "generate", "status", "preview", "downloadIntent", "download", "auth", "unknown"],
+          "properties": {
+            "page": { "type": "integer", "minimum": 0 },
+            "asset": { "type": "integer", "minimum": 0 },
+            "api": { "type": "integer", "minimum": 0 },
+            "parse": { "type": "integer", "minimum": 0 },
+            "generate": { "type": "integer", "minimum": 0 },
+            "status": { "type": "integer", "minimum": 0 },
+            "preview": { "type": "integer", "minimum": 0 },
+            "downloadIntent": { "type": "integer", "minimum": 0 },
+            "download": { "type": "integer", "minimum": 0 },
+            "auth": { "type": "integer", "minimum": 0 },
+            "unknown": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": true
+        },
+        "malformedRows": { "type": "integer", "minimum": 0 }
       }
     }
   ],

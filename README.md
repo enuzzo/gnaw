@@ -94,6 +94,48 @@ node dist/engine/src/cli.js auth list
 node dist/engine/src/cli.js auth delete example
 ```
 
+## Study A Dynamic Render/Export Site
+
+For sites that render a user file into a model, preview, report, or export, use a two-layer workflow:
+
+1. Capture the public app shell and bundles:
+
+```bash
+node dist/engine/src/cli.js capture https://example.com/ \
+  --mode study,navigable \
+  --depth 1 \
+  --max-pages 30 \
+  --out output/example-public
+```
+
+2. If exports or account state matter, create a named profile in a visible browser. Type credentials only in the browser window, never in commands, fixtures, logs, or committed files:
+
+```bash
+node dist/engine/src/cli.js auth login https://example.com/login --profile example
+```
+
+3. Run the scenario with a local test file and save browser network responses to `output/`. This can be a manual Playwright script, a future Gnaw app flow, or a small one-off probe. Keep input fixtures in ignored local paths such as `studies/`.
+
+4. Analyze the scenario trace:
+
+```bash
+node dist/engine/src/cli.js scenario analyze \
+  --network output/example-scenario/network.ndjson \
+  --body output/example-scenario/download-error.json \
+  --out output/example-scenario/scenario-report.md
+```
+
+The report classifies common dynamic-app pipeline endpoints:
+
+- `parse`: input-file parsing such as GPX/CSV/document upload validation.
+- `generate`: render/model generation requests.
+- `status`: polling endpoints for asynchronous jobs.
+- `preview`: preview mesh, image, points, or other render artifacts.
+- `downloadIntent`: UI/account gate checks before export.
+- `download`: direct export endpoints.
+
+If the report says `Auth gate: required`, repeat the scenario after a confirmed profile login. A direct export returning `401`, `403`, `auth_required`, or a sign-in/signup prompt means the backend is enforcing auth; do not treat it as only a frontend lock.
+
 ## Repository Layout
 
 ```text
