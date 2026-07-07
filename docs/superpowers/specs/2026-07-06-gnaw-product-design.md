@@ -1,7 +1,7 @@
 # Gnaw Product Design
 
 Date: 2026-07-06
-Status: Approved direction, pending implementation plan
+Status: Superseded by /SPEC.md (v2, 2026-07-06). Kept as historical design record.
 
 ## Purpose
 
