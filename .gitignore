@@ -8,6 +8,7 @@ dist/
 !.env.example
 
 # Gnaw runtime output
+studies/
 output/
 outputs/
 hauls/

@@ -15,7 +15,7 @@ export async function loginProfile({
   url,
   profileName,
   store,
-  launchPersistentContext = chromium.launchPersistentContext,
+  launchPersistentContext = (...args) => chromium.launchPersistentContext(...args),
   now = () => new Date()
 }: AuthLoginOptions): Promise<ProfileMetadata> {
   const lock = await store.acquireLock(profileName);
