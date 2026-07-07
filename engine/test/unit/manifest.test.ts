@@ -67,4 +67,34 @@ describe("manifest builder", () => {
     expect(manifest.stats.bytes).toBe(10);
     expect(validateManifest(manifest).valid).toBe(true);
   });
+
+  it("adds auth metadata when a profile is used", () => {
+    const manifest = buildManifest({
+      entrypoint: "http://127.0.0.1:43114/protected/",
+      host: "127.0.0.1",
+      startedAt: "2026-07-06T10:22:31Z",
+      finishedAt: "2026-07-06T10:22:32Z",
+      durationMs: 1000,
+      result: "complete",
+      modes: ["study"],
+      config: defaultCaptureConfig({ authProfile: "client-a" }),
+      auth: {
+        mode: "profile",
+        profileName: "client-a",
+        storageStateUsed: true,
+        redacted: true
+      },
+      pages: [],
+      assets: []
+    });
+
+    expect(manifest.auth).toEqual({
+      mode: "profile",
+      profileName: "client-a",
+      storageStateUsed: true,
+      redacted: true
+    });
+    expect(JSON.stringify(manifest)).not.toContain("gnaw_cookie_secret_DO_NOT_LEAK");
+    expect(validateManifest(manifest).valid).toBe(true);
+  });
 });

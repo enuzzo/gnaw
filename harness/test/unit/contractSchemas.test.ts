@@ -38,6 +38,27 @@ describe("contract schemas", () => {
         auth: { ...validManifest().auth, redacted: false }
       }).valid
     ).toBe(false);
+    expect(
+      validateManifest({
+        ...validManifest(),
+        config: { ...validManifest().config, authProfile: "client-a" },
+        auth: undefined
+      }).valid
+    ).toBe(false);
+    expect(
+      validateManifest({
+        ...validManifest(),
+        config: { ...validManifest().config, authProfile: null },
+        auth: validManifest().auth
+      }).valid
+    ).toBe(false);
+    expect(
+      validateManifest({
+        ...validManifest(),
+        config: { ...validManifest().config, authProfile: "client-a" },
+        auth: { ...validManifest().auth, profileName: "client-b" }
+      }).valid
+    ).toBe(false);
   });
 
   it("accepts all stdout event types with v2 and forward-compatible fields", () => {
@@ -80,6 +101,26 @@ describe("contract schemas", () => {
     ).toBe(true);
   });
 
+  it("accepts auth profile management events", () => {
+    expect(
+      validateEvent({
+        v: 2,
+        type: "auth_profile",
+        profileName: "client-a",
+        lastVerifiedUrl: "http://127.0.0.1:43114/protected/",
+        lastVerifiedAt: "2026-07-06T10:22:31.000Z",
+        locked: false
+      }).valid
+    ).toBe(true);
+    expect(
+      validateEvent({
+        v: 2,
+        type: "auth_deleted",
+        profileName: "client-a"
+      }).valid
+    ).toBe(true);
+  });
+
   it("accepts a waterfall response row and rejects secrets or bodies", () => {
     expect(validateWaterfallRow(validWaterfallRow()).valid).toBe(true);
     expect(validateWaterfallRow({ ...validWaterfallRow(), requestHeaders: {} }).valid).toBe(false);
@@ -116,7 +157,7 @@ function validManifest() {
       maxTotalBytes: 2147483648,
       maxAssetBytes: 104857600,
       userAgent: "Gnaw Test",
-      authProfile: null
+      authProfile: "client-a"
     },
     stack: {
       primary: "Next.js",

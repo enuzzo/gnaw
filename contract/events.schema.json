@@ -23,7 +23,9 @@
         "warning",
         "error",
         "state",
-        "done"
+        "done",
+        "auth_profile",
+        "auth_deleted"
       ]
     }
   },
@@ -197,6 +199,23 @@
           "additionalProperties": true
         },
         "haulPath": { "type": "string" }
+      }
+    },
+    {
+      "required": ["profileName", "lastVerifiedUrl", "lastVerifiedAt", "locked"],
+      "properties": {
+        "type": { "const": "auth_profile" },
+        "profileName": { "type": "string" },
+        "lastVerifiedUrl": { "type": "string" },
+        "lastVerifiedAt": { "type": "string" },
+        "locked": { "type": "boolean" }
+      }
+    },
+    {
+      "required": ["profileName"],
+      "properties": {
+        "type": { "const": "auth_deleted" },
+        "profileName": { "type": "string" }
       }
     }
   ],

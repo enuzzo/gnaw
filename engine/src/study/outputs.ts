@@ -7,11 +7,13 @@ import type { Manifest, ManifestAsset, ManifestPage } from "../capture/manifest.
 export async function writeBeautifiedAsset({
   haulPath,
   asset,
-  body
+  body,
+  redactText = (value: string) => value
 }: {
   haulPath: string;
   asset: Pick<ManifestAsset, "kind" | "rawPath">;
   body: Buffer;
+  redactText?: (value: string) => string;
 }): Promise<string | undefined> {
   if (asset.kind !== "JS" && asset.kind !== "CSS") {
     return undefined;
@@ -21,7 +23,7 @@ export async function writeBeautifiedAsset({
   const source = body.toString("utf8");
   const formatted = await prettier.format(source, { parser }).catch(() => source);
   const path = asset.rawPath.replace(/^study\/raw\//, "study/beautified/");
-  await writeTextInsideHaul(haulPath, path, formatted);
+  await writeTextInsideHaul(haulPath, path, redactText(formatted));
   return path;
 }
 
@@ -31,6 +33,7 @@ export async function writeSourceMapIfPresent({
   rawPath,
   body,
   normalizeSourceMapPath,
+  redactText = (value: string) => value,
   fetchText = fetchTextUrl
 }: {
   haulPath: string;
@@ -38,6 +41,7 @@ export async function writeSourceMapIfPresent({
   rawPath: string;
   body: Buffer;
   normalizeSourceMapPath(url: string): string;
+  redactText?: (value: string) => string;
   fetchText?: (url: string) => Promise<string | null>;
 }): Promise<string | undefined> {
   const sourceMapUrl = findSourceMapUrl(body.toString("utf8"), assetUrl);
@@ -51,7 +55,8 @@ export async function writeSourceMapIfPresent({
   }
 
   const sourceMapPath = `study/sourcemaps/${normalizeSourceMapPath(sourceMapUrl)}`;
-  await writeTextInsideHaul(haulPath, sourceMapPath, text.endsWith("\n") ? text : `${text}\n`);
+  const redactedText = redactText(text);
+  await writeTextInsideHaul(haulPath, sourceMapPath, redactedText.endsWith("\n") ? redactedText : `${redactedText}\n`);
   return sourceMapPath;
 }
 
@@ -124,12 +129,14 @@ export async function writeNavigablePages({
   haulPath,
   pages,
   pageHtml,
-  assets
+  assets,
+  redactText = (value: string) => value
 }: {
   haulPath: string;
   pages: ManifestPage[];
   pageHtml: Map<string, string>;
   assets: ManifestAsset[];
+  redactText?: (value: string) => string;
 }): Promise<void> {
   for (const page of pages) {
     const html = pageHtml.get(page.url);
@@ -138,7 +145,7 @@ export async function writeNavigablePages({
     }
     const navigablePath = normalizeNavigablePagePath(page.url);
     page.navigablePath = navigablePath;
-    await writeTextInsideHaul(haulPath, navigablePath, rewriteAssetUrls(html, navigablePath, page.url, assets));
+    await writeTextInsideHaul(haulPath, navigablePath, redactText(rewriteAssetUrls(html, navigablePath, page.url, assets)));
   }
 }
 

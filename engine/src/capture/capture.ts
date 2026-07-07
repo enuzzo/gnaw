@@ -1,11 +1,13 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { chromium, type Browser, type Request } from "playwright-core";
+import { chromium, type Browser, type BrowserContext, type Page, type Request } from "playwright-core";
 import { classifyKind } from "../assets/classifyKind.js";
 import { writeAsset, type WriteAssetResult } from "../assets/writeAsset.js";
+import { createProfileStore, ProfileLockedError, ProfileNotFoundError, type ProfileLock } from "../auth/profiles.js";
 import { resolveBrowser } from "../browser/resolveBrowser.js";
 import { createPathNormalizer } from "../paths/normalizePath.js";
 import { writeRenderedSnapshot } from "../render/renderedSnapshot.js";
+import { createRedactor, type Redactor } from "../redaction/redact.js";
 import { isBlockedNavigationUrl } from "../safety/blocklist.js";
 import { detectStack, type DetectedStack } from "../stack/detectStack.js";
 import {
@@ -40,6 +42,8 @@ export type CaptureOptions = {
   maxTotalBytes?: number;
   maxAssetBytes?: number;
   blockPatterns?: string[];
+  profileName?: string;
+  profileRoot?: string;
   eventSink: CaptureEventSink;
   logSink: CaptureLogSink;
 };
@@ -59,6 +63,7 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
   const skippedUrls: Array<{ url: string; reason: string }> = [];
   const errors: Array<{ code: string; url?: string; message: string; fatal?: boolean }> = [];
   const logLines: string[] = [];
+  const redactor = createRedactor();
   const pageHtml = new Map<string, string>();
   const responseHeaders: Record<string, string> = {};
   const requestIds = new WeakMap<Request, string>();
@@ -71,6 +76,9 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
   let finalized = false;
   let guardrailStopped = false;
   let browser: Browser | undefined;
+  let context: BrowserContext | undefined;
+  let profileLock: ProfileLock | undefined;
+  let storageStateUsed = false;
   let manifestBrowser = "unknown";
   let stack: DetectedStack = { primary: null, detected: [] };
   const wantsStudy = options.modes.includes("study");
@@ -79,7 +87,8 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
     depth: options.depth ?? 1,
     maxPages: options.maxPages ?? 200,
     maxTotalBytes: options.maxTotalBytes ?? 2147483648,
-    maxAssetBytes: options.maxAssetBytes ?? 104857600
+    maxAssetBytes: options.maxAssetBytes ?? 104857600,
+    authProfile: options.profileName ?? null
   });
   options.signal?.addEventListener("abort", () => {
     canceled = true;
@@ -90,8 +99,13 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
   await writeFile(join(haulPath, "waterfall.ndjson"), "", "utf8");
 
   const log = (line: string) => {
-    logLines.push(line);
-    options.logSink(line);
+    const redactedLine = redactor.redactText(line);
+    logLines.push(redactedLine);
+    options.logSink(redactedLine);
+  };
+
+  const emit = (event: { v: 2; type: string; [key: string]: unknown }) => {
+    options.eventSink(redactor.redactObject(event));
   };
 
   const setPartial = () => {
@@ -107,7 +121,15 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
     finalized = true;
     const effectiveResult = canceled ? "canceled" : finalResult;
     const finishedAt = new Date();
-    const manifest = buildManifest({
+    const auth = options.profileName
+      ? {
+        mode: "profile" as const,
+        profileName: options.profileName,
+        storageStateUsed,
+        redacted: true as const
+      }
+      : undefined;
+    const manifest = redactor.redactObject(buildManifest({
       entrypoint: options.entrypoint,
       host,
       startedAt: new Date(started).toISOString(),
@@ -118,14 +140,15 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
       config: captureConfig,
       browser: manifestBrowser,
       stack,
+      auth,
       pages,
       assets,
       skippedUrls,
       errors
-    });
+    }));
     await writeFile(join(haulPath, "gnaw.log"), logLines.length === 0 ? "" : `${logLines.join("\n")}\n`, "utf8");
     await writeFile(join(haulPath, "MANIFEST.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-    options.eventSink({
+    emit({
       v: 2,
       type: "done",
       result: effectiveResult,
@@ -135,11 +158,11 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
   };
 
   try {
-    options.eventSink({ v: 2, type: "hello", engine: { name: engineIdentity.name, version: engineIdentity.version }, contract: engineIdentity.contract });
+    emit({ v: 2, type: "hello", engine: { name: engineIdentity.name, version: engineIdentity.version }, contract: engineIdentity.contract });
     const browserInfo = resolveBrowser();
     manifestBrowser = browserInfo.label;
-    options.eventSink({ v: 2, type: "browser", status: "found", detail: browserInfo.label });
-    options.eventSink({
+    emit({ v: 2, type: "browser", status: "found", detail: browserInfo.label });
+    emit({
       v: 2,
       type: "start",
       jobId: "j-fixture",
@@ -160,7 +183,7 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
     if (captureConfig.maxPages <= 0) {
       setPartial();
       skippedUrls.push({ url: options.entrypoint, reason: "max_pages" });
-      options.eventSink({ v: 2, type: "skip", url: options.entrypoint, reason: "max_pages" });
+      emit({ v: 2, type: "skip", url: options.entrypoint, reason: "max_pages" });
       log("Capture partial: max pages reached");
       await finalize("partial");
       return { haulPath };
@@ -175,13 +198,29 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
       return { haulPath };
     }
 
-    browser = await chromium.launch({
-      executablePath: browserInfo.executablePath,
-      headless: true,
-      args: ["--no-sandbox"]
-    });
-    manifestBrowser = `${browserInfo.label} ${browser.version()}`;
-    const context = await browser.newContext({ userAgent: captureConfig.userAgent });
+    if (options.profileName) {
+      const profileStore = createProfileStore({ root: options.profileRoot });
+      await profileStore.readMetadata(options.profileName);
+      profileLock = await profileStore.acquireLock(options.profileName);
+      const profileDir = await profileStore.ensureProfileDir(options.profileName);
+      context = await chromium.launchPersistentContext(profileDir, {
+        executablePath: browserInfo.executablePath,
+        headless: true,
+        args: ["--no-sandbox"],
+        userAgent: captureConfig.userAgent
+      });
+      storageStateUsed = true;
+      manifestBrowser = `${browserInfo.label} ${context.browser()?.version() ?? "unknown"}`;
+      await addContextSecrets(context, options.entrypoint, redactor);
+    } else {
+      browser = await chromium.launch({
+        executablePath: browserInfo.executablePath,
+        headless: true,
+        args: ["--no-sandbox"]
+      });
+      manifestBrowser = `${browserInfo.label} ${browser.version()}`;
+      context = await browser.newContext({ userAgent: captureConfig.userAgent });
+    }
     const page = await context.newPage();
     let activePageUrl = options.entrypoint;
 
@@ -191,7 +230,7 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
       }
       const id = `r-${String(++requestCounter).padStart(4, "0")}`;
       requestIds.set(request, id);
-      options.eventSink({ v: 2, type: "request", id, url: request.url(), method: request.method() });
+      emit({ v: 2, type: "request", id, url: request.url(), method: request.method() });
     });
 
     page.on("response", (response) => {
@@ -219,7 +258,7 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
         if (guardrailStopped || totalBytes + body.byteLength > maxTotalBytes) {
           guardrailStopped = true;
           setPartial();
-          options.eventSink({
+          emit({
             v: 2,
             type: "warning",
             id,
@@ -232,7 +271,7 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
 
         if (body.byteLength > maxAssetBytes) {
           setPartial();
-          options.eventSink({
+          emit({
             v: 2,
             type: "warning",
             id,
@@ -243,14 +282,15 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
           return;
         }
 
-        totalBytes += body.byteLength;
+        const redactedBody = redactor.redactBuffer(body, contentType);
+        totalBytes += redactedBody.byteLength;
         const normalizedAssetPath = normalizer.normalizeAsset(url, contentType).relativePath;
         const studyWrite = wantsStudy
           ? await writeAsset({
             outputRoot: haulPath,
             url,
             contentType,
-            body,
+            body: redactedBody,
             rootPrefix: "study/raw",
             normalizedPath: normalizedAssetPath
           })
@@ -260,7 +300,7 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
             outputRoot: haulPath,
             url,
             contentType,
-            body,
+            body: redactedBody,
             rootPrefix: "navigable/_assets",
             normalizedPath: normalizedAssetPath
           })
@@ -281,37 +321,38 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
         });
         asset.navigablePath = navigableWrite?.rawPath;
         if (wantsStudy && studyWrite) {
-          asset.beautifiedPath = await writeBeautifiedAsset({ haulPath, asset, body });
+          asset.beautifiedPath = await writeBeautifiedAsset({ haulPath, asset, body: redactedBody, redactText: redactor.redactText });
           asset.sourceMapPath = await writeSourceMapIfPresent({
             haulPath,
             assetUrl: url,
             rawPath: asset.rawPath,
-            body,
-            normalizeSourceMapPath: (sourceMapUrl) => normalizer.normalizeAsset(sourceMapUrl, "application/json").relativePath
+            body: redactedBody,
+            normalizeSourceMapPath: (sourceMapUrl) => normalizer.normalizeAsset(sourceMapUrl, "application/json").relativePath,
+            redactText: redactor.redactText
           });
         }
         assets.push(asset);
         await appendWaterfallRow(haulPath, {
           t: requestStarted - started,
-          url,
+          url: redactor.redactText(url),
           method: "GET",
           status: response.status(),
           kind,
           contentType,
-          bytes: body.byteLength,
+          bytes: redactedBody.byteLength,
           durationMs: Date.now() - requestStarted,
           fromCache: false,
           viaJs: asset.viaJs,
-          referrer: asset.referrer,
-          page: activePageUrl
+          referrer: asset.referrer ? redactor.redactText(asset.referrer) : null,
+          page: redactor.redactText(activePageUrl)
         });
-        options.eventSink({
+        emit({
           v: 2,
           type: "asset",
           id,
           url,
           kind,
-          bytes: body.byteLength,
+          bytes: redactedBody.byteLength,
           status: response.status(),
           fromCache: false,
           viaJs: asset.viaJs,
@@ -321,7 +362,7 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
         setPartial();
         const record = toCaptureError(error, response.url(), false);
         errors.push(record);
-        options.eventSink({ v: 2, type: "error", ...record });
+        emit({ v: 2, type: "error", ...record });
         log(`Capture warning: ${record.message}`);
       });
       responseTasks.push(task);
@@ -339,7 +380,7 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
       if (seenPageUrls.size >= captureConfig.maxPages) {
         setPartial();
         skippedUrls.push({ url: current.url, reason: "max_pages" });
-        options.eventSink({ v: 2, type: "skip", url: current.url, reason: "max_pages" });
+        emit({ v: 2, type: "skip", url: current.url, reason: "max_pages" });
         continue;
       }
       await options.control?.waitIfPaused();
@@ -351,11 +392,13 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
 
       activePageUrl = current.url;
       seenPageUrls.add(current.url);
-      options.eventSink({ v: 2, type: "page_start", url: current.url, depth: current.depth });
+      emit({ v: 2, type: "page_start", url: current.url, depth: current.depth });
       const response = await page.goto(current.url, { waitUntil: "load" });
       await page.waitForLoadState("networkidle", { timeout: 3000 }).catch(() => undefined);
       await Promise.allSettled(responseTasks);
-      const html = await page.content();
+      await addPageStorageSecrets(page, redactor);
+      const rawHtml = await page.content();
+      const html = redactor.redactText(rawHtml);
       const renderedPath = wantsStudy ? `study/rendered/${normalizer.normalizeRendered(current.url).relativePath}` : undefined;
       if (renderedPath) {
         await writeRenderedSnapshot({ haulPath, renderedPath, html });
@@ -371,22 +414,22 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
         ...(renderedPath ? { renderedPath } : {})
       });
 
-      options.eventSink({ v: 2, type: "page_done", url: current.url, title: pages[pages.length - 1].title, assets: assets.length });
-      options.eventSink({ v: 2, type: "progress", pages: pages.length, assets: assets.length, bytes: totalBytes, queued: queue.length, elapsedMs: Date.now() - started });
+      emit({ v: 2, type: "page_done", url: current.url, title: pages[pages.length - 1].title, assets: assets.length });
+      emit({ v: 2, type: "progress", pages: pages.length, assets: assets.length, bytes: totalBytes, queued: queue.length, elapsedMs: Date.now() - started });
 
       if (current.depth < captureConfig.depth) {
-        for (const link of extractNavigationLinks(html, current.url)) {
+        for (const link of extractNavigationLinks(rawHtml, current.url)) {
           if (seenPageUrls.has(link) || queue.some((queued) => queued.url === link)) {
             continue;
           }
           if (new URL(link).hostname.toLowerCase() !== host) {
             skippedUrls.push({ url: link, reason: "out_of_scope" });
-            options.eventSink({ v: 2, type: "skip", url: link, reason: "out_of_scope" });
+            emit({ v: 2, type: "skip", url: link, reason: "out_of_scope" });
             continue;
           }
           if (isBlockedNavigationUrl(link, options.blockPatterns)) {
             skippedUrls.push({ url: link, reason: "blocked_pattern" });
-            options.eventSink({ v: 2, type: "skip", url: link, reason: "blocked_pattern" });
+            emit({ v: 2, type: "skip", url: link, reason: "blocked_pattern" });
             continue;
           }
           queue.push({ url: link, depth: current.depth + 1, discoveredFrom: current.url });
@@ -400,17 +443,17 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
       headers: responseHeaders
     });
     if (stack.primary !== null) {
-      options.eventSink({ v: 2, type: "stack", primary: stack.primary, detected: stack.detected });
+      emit({ v: 2, type: "stack", primary: stack.primary, detected: stack.detected });
     }
 
     if (canceled) {
       result = "canceled";
     }
     if (options.modes.includes("navigable")) {
-      await writeNavigablePages({ haulPath, pages, pageHtml, assets });
+      await writeNavigablePages({ haulPath, pages, pageHtml, assets, redactText: redactor.redactText });
     }
     if (options.modes.includes("study")) {
-      const previewManifest = buildManifest({
+      const previewManifest = redactor.redactObject(buildManifest({
         entrypoint: options.entrypoint,
         host,
         startedAt: new Date(started).toISOString(),
@@ -421,16 +464,28 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
         config: captureConfig,
         browser: manifestBrowser,
         stack,
+        auth: options.profileName
+          ? {
+            mode: "profile",
+            profileName: options.profileName,
+            storageStateUsed,
+            redacted: true
+          }
+          : undefined,
         pages,
         assets,
         skippedUrls,
         errors
-      });
+      }));
       await writeContextMarkdown(haulPath, previewManifest);
     }
     log(captureResultLog(result));
-    await browser.close();
+    await context.close();
+    context = undefined;
+    await browser?.close();
     browser = undefined;
+    await profileLock?.release();
+    profileLock = undefined;
     await finalize(result);
   } catch (error) {
     if (options.signal?.aborted || canceled) {
@@ -445,13 +500,19 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
     setPartial();
     const record = toCaptureError(error, options.entrypoint, true);
     errors.push(record);
-    options.eventSink({ v: 2, type: "error", ...record });
+    emit({ v: 2, type: "error", ...record });
     log(`Capture failed: ${record.message}`);
     await Promise.allSettled(responseTasks);
     await finalize("partial");
   } finally {
+    if (context) {
+      await context.close().catch(() => undefined);
+    }
     if (browser) {
       await browser.close().catch(() => undefined);
+    }
+    if (profileLock) {
+      await profileLock.release().catch(() => undefined);
     }
   }
 
@@ -461,7 +522,7 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
 function toCaptureError(error: unknown, url: string, fatal: boolean): { code: string; url: string; message: string; fatal: boolean } {
   const message = error instanceof Error ? error.message : String(error);
   return {
-    code: classifyErrorCode(message),
+    code: classifyErrorCode(message, error),
     url,
     message,
     fatal
@@ -474,13 +535,63 @@ function captureResultLog(result: "complete" | "partial" | "canceled"): string {
   return "Capture complete";
 }
 
-function classifyErrorCode(message: string): string {
+function classifyErrorCode(message: string, error?: unknown): string {
+  if (error instanceof ProfileLockedError || (typeof error === "object" && error !== null && "code" in error && error.code === "profile_locked")) {
+    return "profile_locked";
+  }
+  if (error instanceof ProfileNotFoundError || (typeof error === "object" && error !== null && "code" in error && error.code === "profile_not_found")) {
+    return "profile_not_found";
+  }
   if (message.includes("ERR_NAME_NOT_RESOLVED")) return "dns";
   if (message.includes("ERR_CERT") || message.includes("SSL") || message.includes("TLS")) return "tls";
   if (message.includes("HTTP")) return "http_error";
   if (message.includes("write") || message.includes("EACCES") || message.includes("ENOENT")) return "write_failed";
   if (message.includes("Target page") || message.includes("browser")) return "browser_crash";
   return "nav_timeout";
+}
+
+async function addContextSecrets(context: BrowserContext, entrypoint: string, redactor: Redactor): Promise<void> {
+  const cookies = await context.cookies(entrypoint).catch(() => []);
+  for (const cookie of cookies) {
+    redactor.addSecret(cookie.value);
+  }
+
+  const page = await context.newPage();
+  try {
+    await page.goto(new URL(entrypoint).origin, { waitUntil: "domcontentloaded" }).catch(() => undefined);
+    await addPageStorageSecrets(page, redactor);
+  } finally {
+    await page.close().catch(() => undefined);
+  }
+}
+
+async function addPageStorageSecrets(page: Page, redactor: Redactor): Promise<void> {
+  const values = await page.evaluate(() => {
+    const storageValues: string[] = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key) {
+        const value = localStorage.getItem(key);
+        if (value) storageValues.push(value);
+      }
+    }
+    for (let index = 0; index < sessionStorage.length; index += 1) {
+      const key = sessionStorage.key(index);
+      if (key) {
+        const value = sessionStorage.getItem(key);
+        if (value) storageValues.push(value);
+      }
+    }
+    for (const cookie of document.cookie.split(";")) {
+      const value = cookie.split("=").slice(1).join("=").trim();
+      if (value) storageValues.push(decodeURIComponent(value));
+    }
+    return storageValues;
+  }).catch(() => []);
+
+  for (const value of values) {
+    redactor.addSecret(value);
+  }
 }
 
 function extractNavigationLinks(html: string, baseUrl: string): string[] {

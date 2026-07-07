@@ -4,14 +4,20 @@ import { pathToFileURL } from "node:url";
 import { createCaptureController } from "./capture/controller.js";
 import { createEventWriter } from "./capture/events.js";
 import { captureSite, type CaptureOptions, type CaptureResult } from "./capture/capture.js";
+import { createProfileStore, type ListedProfile, type ProfileMetadata, type ProfileStore } from "./auth/profiles.js";
+import { loginProfile } from "./auth/login.js";
 import { buildBlockPatterns } from "./safety/blocklist.js";
 export { engineIdentity } from "./identity.js";
+
+export type AuthLogin = (options: { url: string; profileName: string; store: ProfileStore }) => Promise<ProfileMetadata>;
 
 export type CliDependencies = {
   stdin?: Readable;
   stdout?: Writable;
   stderr?: Writable;
   capture?: (options: CaptureOptions) => Promise<CaptureResult>;
+  profileStore?: ProfileStore;
+  authLogin?: AuthLogin;
 };
 
 export async function runCli(argv = process.argv, dependencies: CliDependencies = {}): Promise<void> {
@@ -22,7 +28,9 @@ export function createCliProgram({
   stdin = process.stdin,
   stdout = process.stdout,
   stderr = process.stderr,
-  capture = captureSite
+  capture = captureSite,
+  profileStore = createProfileStore(),
+  authLogin = loginProfile
 }: CliDependencies = {}): Command {
   const program = new Command();
 
@@ -64,6 +72,7 @@ export function createCliProgram({
           maxPages: Number.parseInt(String(options.maxPages ?? "200"), 10),
           maxTotalBytes: Number.parseInt(String(options.maxBytes ?? "2147483648"), 10),
           maxAssetBytes: Number.parseInt(String(options.maxAssetBytes ?? "104857600"), 10),
+          profileName: typeof options.profile === "string" ? options.profile : undefined,
           blockPatterns: buildBlockPatterns({
             add: Array.isArray(options.block) ? options.block.map(String) : [],
             remove: Array.isArray(options.unblock) ? options.unblock.map(String) : []
@@ -84,17 +93,37 @@ export function createCliProgram({
     .command("login")
     .argument("<url>")
     .requiredOption("--profile <name>", "profile name")
-    .action(() => {
-      throw new Error("auth login is not implemented yet");
+    .action(async (url: string, options: { profile: string }) => {
+      const writer = createEventWriter({ stdout, stderr });
+      const profile = await authLogin({ url, profileName: options.profile, store: profileStore });
+      writer.event(authProfileEvent({ ...profile, locked: false }));
+      writer.log(`Saved auth profile ${profile.name}`);
     });
-  auth.command("list").action(() => {
-    throw new Error("auth list is not implemented yet");
+  auth.command("list").action(async () => {
+    const writer = createEventWriter({ stdout, stderr });
+    for (const profile of await profileStore.listProfiles()) {
+      writer.event(authProfileEvent(profile));
+    }
   });
-  auth.command("delete").argument("<name>").action(() => {
-    throw new Error("auth delete is not implemented yet");
+  auth.command("delete").argument("<name>").action(async (name: string) => {
+    const writer = createEventWriter({ stdout, stderr });
+    await profileStore.deleteProfile(name);
+    writer.event({ v: 2, type: "auth_deleted", profileName: name });
+    writer.log(`Deleted auth profile ${name}`);
   });
 
   return program;
+}
+
+function authProfileEvent(profile: ListedProfile): { v: 2; type: "auth_profile"; profileName: string; lastVerifiedUrl: string; lastVerifiedAt: string; locked: boolean } {
+  return {
+    v: 2,
+    type: "auth_profile",
+    profileName: profile.name,
+    lastVerifiedUrl: profile.lastVerifiedUrl,
+    lastVerifiedAt: profile.lastVerifiedAt,
+    locked: profile.locked
+  };
 }
 
 function collect(value: string, previous: string[]): string[] {

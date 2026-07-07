@@ -177,7 +177,10 @@
       "required": ["mode", "profileName", "storageStateUsed", "redacted"],
       "properties": {
         "mode": { "type": "string", "enum": ["profile"] },
-        "profileName": { "type": "string" },
+        "profileName": {
+          "type": "string",
+          "const": { "$data": "/config/authProfile" }
+        },
         "storageStateUsed": { "type": "boolean" },
         "redacted": { "const": true }
       },
@@ -220,5 +223,41 @@
       }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "config": {
+            "properties": {
+              "authProfile": { "type": "string" }
+            },
+            "required": ["authProfile"]
+          }
+        },
+        "required": ["config"]
+      },
+      "then": {
+        "required": ["auth"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "config": {
+            "properties": {
+              "authProfile": { "type": "null" }
+            },
+            "required": ["authProfile"]
+          }
+        },
+        "required": ["config"]
+      },
+      "then": {
+        "not": {
+          "required": ["auth"]
+        }
+      }
+    }
+  ],
   "additionalProperties": true
 }

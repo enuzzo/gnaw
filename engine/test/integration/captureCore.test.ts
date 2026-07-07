@@ -1,6 +1,7 @@
+import { chromium } from "playwright-core";
 import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { startFixture, type RunningFixture } from "../../../harness/test/helpers/fixtures";
 import {
@@ -9,6 +10,8 @@ import {
   validateWaterfallRow
 } from "../../../harness/src/contract/validate";
 import { captureSite } from "../../src/capture/capture";
+import { createProfileStore } from "../../src/auth/profiles";
+import { resolveBrowser } from "../../src/browser/resolveBrowser";
 
 describe("capture core", () => {
   const tmpRoots: string[] = [];
@@ -365,4 +368,121 @@ describe("capture core", () => {
     expect(manifest.result).toBe("canceled");
     expect(stdout.at(-1)).toMatchObject({ v: 2, type: "done", result: "canceled" });
   });
+
+  it("uses an auth profile while keeping planted secrets out of the entire haul", async () => {
+    const fixture = await startFixture("auth");
+    fixtures.push(fixture);
+    const outDir = await tempRoot();
+    const profileRoot = await tempRoot();
+    const profileName = "client-a";
+    const plantedSecrets = {
+      cookie: "gnaw_cookie_secret_DO_NOT_LEAK",
+      bearer: "gnaw_bearer_secret_DO_NOT_LEAK",
+      local: "gnaw_local_secret_DO_NOT_LEAK",
+      session: "gnaw_session_secret_DO_NOT_LEAK",
+      runtimeLocal: "gnaw_runtime_local_secret_DO_NOT_LEAK",
+      runtimeSession: "gnaw_runtime_session_secret_DO_NOT_LEAK",
+      runtimePassword: "gnaw_runtime_password_secret_DO_NOT_LEAK"
+    };
+    await seedAuthProfile({
+      profileRoot,
+      profileName,
+      origin: fixture.origin,
+      secrets: plantedSecrets
+    });
+    const stdout: unknown[] = [];
+    const stderr: string[] = [];
+
+    const result = await captureSite({
+      entrypoint: `${fixture.origin}/protected/`,
+      outDir,
+      modes: ["study"],
+      depth: 0,
+      profileName,
+      profileRoot,
+      eventSink: (event) => stdout.push(event),
+      logSink: (line) => stderr.push(line)
+    });
+
+    const manifest = JSON.parse(await readFile(join(result.haulPath, "MANIFEST.json"), "utf8"));
+    expect(validateManifest(manifest).valid).toBe(true);
+    expect(stdout.every((event) => validateEvent(event).valid)).toBe(true);
+    expect(manifest.config.authProfile).toBe(profileName);
+    expect(manifest.auth).toEqual({
+      mode: "profile",
+      profileName,
+      storageStateUsed: true,
+      redacted: true
+    });
+    expect(manifest.pages[0].renderedPath).toBe("study/rendered/127.0.0.1/protected/index.html");
+    const renderedHtml = await readFile(join(result.haulPath, "study", "rendered", "127.0.0.1", "protected", "index.html"), "utf8");
+    expect(renderedHtml).toContain('data-auth-fixture="profile-loaded"');
+    const streamText = `${JSON.stringify(stdout)}\n${stderr.join("\n")}`;
+
+    const haulFiles = await readHaulFiles(result.haulPath);
+    const haulText = `${streamText}\n${haulFiles.map((file) => `${file.path}\n${file.contents}`).join("\n")}`;
+    for (const secret of Object.values(plantedSecrets)) {
+      expect(haulText).not.toContain(secret);
+    }
+    expect(haulFiles.map((file) => file.path)).not.toContain(expect.stringContaining(profileName));
+  }, 20000);
 });
+
+async function seedAuthProfile(input: {
+  profileRoot: string;
+  profileName: string;
+  origin: string;
+  secrets: {
+    cookie: string;
+    bearer: string;
+    local: string;
+    session: string;
+  };
+}): Promise<void> {
+  const store = createProfileStore({ root: input.profileRoot });
+  await store.ensureProfileDir(input.profileName);
+  const browserInfo = resolveBrowser();
+  const context = await chromium.launchPersistentContext(store.profileDir(input.profileName), {
+    executablePath: browserInfo.executablePath,
+    headless: true,
+    args: ["--no-sandbox"]
+  });
+  try {
+    const page = await context.newPage();
+    await page.goto(`${input.origin}/`, { waitUntil: "load" });
+    await page.evaluate((secrets) => {
+      localStorage.setItem("gnawLocalAuth", secrets.local);
+      localStorage.setItem("gnawBearerToken", secrets.bearer);
+      localStorage.setItem("gnawSessionSeed", secrets.session);
+      document.cookie = `gnaw_auth=${secrets.cookie}; path=/; max-age=3600; SameSite=Lax`;
+    }, input.secrets);
+  } finally {
+    await context.close();
+  }
+  await store.saveMetadata({
+    name: input.profileName,
+    lastVerifiedUrl: `${input.origin}/protected/`,
+    lastVerifiedAt: "2026-07-06T10:22:31.000Z"
+  });
+}
+
+async function readHaulFiles(root: string): Promise<Array<{ path: string; contents: string }>> {
+  const files: Array<{ path: string; contents: string }> = [];
+  await readHaulFilesInto(root, root, files);
+  return files;
+}
+
+async function readHaulFilesInto(root: string, path: string, files: Array<{ path: string; contents: string }>): Promise<void> {
+  const entries = await readdir(path, { withFileTypes: true });
+  for (const entry of entries) {
+    const child = join(path, entry.name);
+    if (entry.isDirectory()) {
+      await readHaulFilesInto(root, child, files);
+      continue;
+    }
+    files.push({
+      path: relative(root, child).split(sep).join("/"),
+      contents: await readFile(child, "utf8")
+    });
+  }
+}

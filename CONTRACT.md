@@ -98,10 +98,14 @@ Supported event types:
 - `error`
 - `state`
 - `done`
+- `auth_profile`
+- `auth_deleted`
 
 Extra fields are allowed for forward compatibility. Consumers ignore fields and event types they do not understand. `request` precedes `asset` with the same `id` so the GUI can render in-flight waterfall rows. `progress` is authoritative for totals and is throttled to at most four events per second.
 
-`skip.reason` values are `blocked_pattern`, `out_of_scope`, `robots`, `max_pages`, and `max_depth`. Stable error codes include `nav_timeout`, `dns`, `tls`, `http_error`, `write_failed`, `browser_crash`, and `profile_locked`. `fatal: true` means the job is ending, but a `done` event still follows whenever a manifest could be written.
+`auth_profile` reports profile metadata only: profile name, last verified URL, timestamp, and lock state. `auth_deleted` reports the deleted profile name. Neither event carries cookies, storage values, authorization headers, or tokens.
+
+`skip.reason` values are `blocked_pattern`, `out_of_scope`, `robots`, `max_pages`, and `max_depth`. Stable error codes include `nav_timeout`, `dns`, `tls`, `http_error`, `write_failed`, `browser_crash`, `profile_locked`, and `profile_not_found`. `fatal: true` means the job is ending, but a `done` event still follows whenever a manifest could be written.
 
 ## Stdin Control Commands
 

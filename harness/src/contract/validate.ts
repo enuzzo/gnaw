@@ -62,7 +62,7 @@ function getValidator(name: ContractSchemaName): ValidateFunction {
     return cached;
   }
 
-  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  const ajv = new Ajv2020({ allErrors: true, strict: false, $data: true });
   const schemaPath = path.join(process.cwd(), "contract", schemaFiles[name]);
   const schema = JSON.parse(readFileSync(schemaPath, "utf8")) as AnySchema;
   const validate = ajv.compile(schema);

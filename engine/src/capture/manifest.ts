@@ -43,6 +43,13 @@ export type ManifestAsset = {
   fromCache: boolean;
 };
 
+export type ManifestAuth = {
+  mode: "profile";
+  profileName: string;
+  storageStateUsed: boolean;
+  redacted: true;
+};
+
 export type Manifest = ReturnType<typeof buildManifest>;
 
 const kinds: AssetKind[] = ["HTML", "JS", "CSS", "IMG", "FONT", "JSON", "MEDIA", "WASM", "OTHER"];
@@ -74,6 +81,7 @@ export function buildManifest(input: {
   config: CaptureConfig;
   browser?: string;
   stack?: DetectedStack;
+  auth?: ManifestAuth;
   pages: ManifestPage[];
   assets: ManifestAsset[];
   skippedUrls?: Array<{ url: string; reason: string }>;
@@ -107,6 +115,7 @@ export function buildManifest(input: {
     },
     pages: input.pages,
     assets: input.assets,
+    ...(input.auth ? { auth: input.auth } : {}),
     safety: {
       skippedUrls: input.skippedUrls ?? []
     },

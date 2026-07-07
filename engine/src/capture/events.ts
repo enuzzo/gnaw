@@ -1,4 +1,5 @@
 import type { Writable } from "node:stream";
+import { redactObject, redactText } from "../redaction/redact.js";
 
 export type GnawEvent = {
   v: 2;
@@ -20,10 +21,10 @@ export function createEventWriter({
 } = {}): EventWriter {
   return {
     event(event) {
-      stdout.write(`${JSON.stringify(event)}\n`);
+      stdout.write(`${JSON.stringify(redactObject(event))}\n`);
     },
     log(message) {
-      stderr.write(`${message}\n`);
+      stderr.write(`${redactText(message)}\n`);
     }
   };
 }

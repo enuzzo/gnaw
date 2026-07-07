@@ -1,6 +1,7 @@
 import { PassThrough, Writable } from "node:stream";
 import { describe, expect, it } from "vitest";
 import { isCliEntrypoint, runCli, createCliProgram } from "../../src/cli";
+import type { ProfileStore } from "../../src/auth/profiles";
 
 describe("CLI surface", () => {
   it("registers capture and auth commands", () => {
@@ -61,6 +62,7 @@ describe("CLI surface", () => {
       outDir: "/tmp/gnaw",
       modes: ["study"],
       depth: 0,
+      profileName: undefined,
       maxPages: 3,
       maxTotalBytes: 1000,
       maxAssetBytes: 500,
@@ -73,6 +75,37 @@ describe("CLI surface", () => {
       result: "complete"
     });
     expect(stderr.join("")).toBe("Capture complete\n");
+  });
+
+  it("passes capture profile names to the engine without writing human text to stdout", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const calls: unknown[] = [];
+    const program = createCliProgram({
+      stdout: captureStream(stdout),
+      stderr: captureStream(stderr),
+      capture: async (options) => {
+        calls.push(options);
+        options.eventSink({ v: 2, type: "done", result: "complete", summary: { pages: 0, assets: 0, bytes: 0 }, haulPath: "/tmp/haul" });
+        return { haulPath: "/tmp/haul" };
+      }
+    });
+
+    await program.parseAsync([
+      "node",
+      "gnaw",
+      "capture",
+      "http://127.0.0.1:43114/protected/",
+      "--profile",
+      "client-a"
+    ]);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ profileName: "client-a" });
+    expect(stdout.join("").trim().split("\n").map((line) => JSON.parse(line))).toEqual([
+      { v: 2, type: "done", result: "complete", summary: { pages: 0, assets: 0, bytes: 0 }, haulPath: "/tmp/haul" }
+    ]);
+    expect(stderr.join("")).toBe("");
   });
 
   it("defaults capture to Study mode until navigable rewriting is implemented", async () => {
@@ -136,6 +169,90 @@ describe("CLI surface", () => {
       { v: 2, type: "state", state: "canceled" },
       { v: 2, type: "done", result: "canceled" }
     ]);
+  });
+
+  it("runs auth list, delete, and login as schema-shaped NDJSON events", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const deleted: string[] = [];
+    let loginStore: ProfileStore | undefined;
+    const profileStore: ProfileStore = {
+      root: "/tmp/gnaw-profiles",
+      profileDir: (name) => `/tmp/gnaw-profiles/${name}`,
+      ensureProfileDir: async (name) => `/tmp/gnaw-profiles/${name}`,
+      saveMetadata: async (input) => ({
+        schemaVersion: 1,
+        name: input.name,
+        lastVerifiedUrl: input.lastVerifiedUrl,
+        lastVerifiedAt: input.lastVerifiedAt
+      }),
+      readMetadata: async (name) => ({
+        schemaVersion: 1,
+        name,
+        lastVerifiedUrl: "http://127.0.0.1:43114/protected/",
+        lastVerifiedAt: "2026-07-06T10:22:31.000Z"
+      }),
+      listProfiles: async () => [
+        {
+          schemaVersion: 1,
+          name: "client-a",
+          lastVerifiedUrl: "http://127.0.0.1:43114/protected/",
+          lastVerifiedAt: "2026-07-06T10:22:31.000Z",
+          locked: false
+        }
+      ],
+      deleteProfile: async (name) => {
+        deleted.push(name);
+      },
+      acquireLock: async () => ({
+        release: async () => undefined
+      })
+    };
+    const program = createCliProgram({
+      stdout: captureStream(stdout),
+      stderr: captureStream(stderr),
+      profileStore,
+      authLogin: async ({ profileName, url, store }) => {
+        loginStore = store;
+        return {
+          schemaVersion: 1,
+          name: profileName,
+          lastVerifiedUrl: url,
+          lastVerifiedAt: "2026-07-06T10:22:32.000Z"
+        };
+      }
+    });
+
+    await program.parseAsync(["node", "gnaw", "auth", "list"]);
+    await program.parseAsync(["node", "gnaw", "auth", "delete", "client-a"]);
+    await program.parseAsync(["node", "gnaw", "auth", "login", "http://127.0.0.1:43114/", "--profile", "client-b"]);
+
+    expect(stdout.join("").trim().split("\n").map((line) => JSON.parse(line))).toEqual([
+      {
+        v: 2,
+        type: "auth_profile",
+        profileName: "client-a",
+        lastVerifiedUrl: "http://127.0.0.1:43114/protected/",
+        lastVerifiedAt: "2026-07-06T10:22:31.000Z",
+        locked: false
+      },
+      {
+        v: 2,
+        type: "auth_deleted",
+        profileName: "client-a"
+      },
+      {
+        v: 2,
+        type: "auth_profile",
+        profileName: "client-b",
+        lastVerifiedUrl: "http://127.0.0.1:43114/",
+        lastVerifiedAt: "2026-07-06T10:22:32.000Z",
+        locked: false
+      }
+    ]);
+    expect(stderr.join("")).toBe("Deleted auth profile client-a\nSaved auth profile client-b\n");
+    expect(deleted).toEqual(["client-a"]);
+    expect(loginStore).toBe(profileStore);
   });
 });
 
