@@ -6,6 +6,7 @@ dist/
 .env
 .env.*
 !.env.example
+.gnaw-secrets/
 
 # Gnaw runtime output
 studies/
