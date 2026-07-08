@@ -9,7 +9,7 @@ dist/
 .gnaw-secrets/
 
 # Gnaw runtime output
-studies/
+/studies/
 /output/
 /outputs/
 /hauls/

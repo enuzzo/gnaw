@@ -15,6 +15,10 @@ This repo currently contains the TypeScript/Playwright reference engine, contrac
 
 The macOS app shell is reserved under `app/Gnaw/`; the CLI and engine are the current working surface.
 
+## Study Notes
+
+- [Trailmark3D study notes, 2026-07-08](docs/studies/trailmark3d-2026-07-08.md)
+
 ## Safety Model
 
 Gnaw is an archival and study tool. Use it only on sites you own, operate, or have permission to inspect.
