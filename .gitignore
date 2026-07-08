@@ -10,10 +10,10 @@ dist/
 
 # Gnaw runtime output
 studies/
-output/
-outputs/
-hauls/
-haul-*/
+/output/
+/outputs/
+/hauls/
+/haul-*/
 *.gnaw/
 gnaw.log
 waterfall.ndjson

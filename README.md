@@ -136,6 +136,27 @@ The report classifies common dynamic-app pipeline endpoints:
 
 If the report says `Auth gate: required`, repeat the scenario after a confirmed profile login. A direct export returning `401`, `403`, `auth_required`, or a sign-in/signup prompt means the backend is enforcing auth; do not treat it as only a frontend lock.
 
+## Output Naming
+
+Organize generated study artifacts by domain, date, session, and artifact type:
+
+```text
+output/<domain>/<YYYY-MM-DD>/<YYYY-MM-DD>__<project>__<HH-mm-ss>/
+  site/
+  screenshots/
+  exports/
+  reports/
+  network/
+  bodies/
+  logs/
+```
+
+Put the date first, then the project name, then the time. Example export:
+
+```text
+output/trailmark3d.com/2026-07-08/2026-07-08__Granforcora_2026__08-42-43/exports/2026-07-08__Granforcora_2026__08-42-43.3mf
+```
+
 ## Repository Layout
 
 ```text
