@@ -30,6 +30,7 @@ describe("scenario analyzer", () => {
         { type: "response", method: "GET", url: "https://example.test/preview_mesh/job-123/terrain", status: 200, contentType: "model/gltf-binary" },
         { type: "response", method: "GET", url: "https://example.test/preview_points/job-123", status: 200, contentType: "application/json" },
         { type: "response", method: "POST", url: "https://example.test/download-intent/job-123", status: 200, contentType: "application/json" },
+        { type: "response", method: "POST", url: "https://example.test/register_download/job-123", status: 200, contentType: "application/json" },
         { type: "response", method: "GET", url: "https://example.test/download/job-123/3mf", status: 401, contentType: "application/json" }
       ].map((row) => JSON.stringify(row)).join("\n"),
       "utf8"
@@ -48,7 +49,7 @@ describe("scenario analyzer", () => {
       generate: 1,
       status: 1,
       preview: 2,
-      downloadIntent: 1,
+      downloadIntent: 2,
       download: 1
     });
     expect(analysis.jobIds).toEqual(["job-123"]);

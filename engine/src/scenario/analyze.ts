@@ -145,7 +145,7 @@ function classifyEndpoint(method: string, path: string, contentType: string): Sc
   if (method === "POST" && /(^|\/)(upload|generate|render|model|mesh)(\/|$)/.test(lowerPath)) return "generate";
   if (/(^|\/)status(\/|$)/.test(lowerPath)) return "status";
   if (/(^|\/)(preview|preview_mesh|preview_points)(\/|$)/.test(lowerPath) || lowerType.includes("model/gltf")) return "preview";
-  if (/(^|\/)download-intent(\/|$)/.test(lowerPath)) return "downloadIntent";
+  if (/(^|\/)(download-intent|register_download)(\/|$)/.test(lowerPath)) return "downloadIntent";
   if (/(^|\/)(download|export)(\/|$)/.test(lowerPath)) return "download";
   if (lowerType.includes("text/html")) return "page";
   if (/\.(js|css|png|jpg|jpeg|svg|webp|gif|woff2?|ttf|otf)$/i.test(path)) return "asset";
@@ -179,7 +179,7 @@ function collectJobIds(endpoints: ScenarioEndpoint[]): string[] {
     const parts = endpoint.path.split("/").filter(Boolean);
     for (let index = 0; index < parts.length - 1; index += 1) {
       const marker = parts[index].toLowerCase();
-      if (["status", "download-intent", "download", "download_token", "preview_mesh", "preview_points"].includes(marker)) {
+      if (["status", "download-intent", "register_download", "download", "download_token", "preview_mesh", "preview_points"].includes(marker)) {
         ids.add(parts[index + 1]);
       }
     }
