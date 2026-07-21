@@ -11,9 +11,29 @@ Unlike static mirroring tools, Gnaw lets Chromium execute the page, observes the
 
 ## Status
 
-This repo currently contains the TypeScript/Playwright reference engine, contract schemas, local fixture sites, auth profile support, redaction logic, and a golden-snapshot harness.
+This repo contains the TypeScript/Playwright engine, contract schemas, local fixture sites, auth profile support, redaction logic, a golden-snapshot harness, and the first functional SwiftUI macOS app alpha.
 
-The macOS app shell is reserved under `app/Gnaw/`; the CLI and engine are the current working surface.
+Run the app with:
+
+```bash
+./script/build_and_run.sh
+```
+
+The app launches the real engine as a child process, renders its NDJSON event stream, and supports live progress, pause, resume, cancel, and completed-haul results. It also scans the configured output folder into a persistent haul library, reloads historical waterfalls, can reveal or re-gnaw earlier captures, and previews captured images or highlighted source files from the waterfall.
+
+## Download the macOS app
+
+Gnaw also ships as a **self-contained, universal** macOS app — a `.app` bundle with its own Node.js runtime and the compiled engine baked in, packaged as `dist/Gnaw.dmg`. End users need no repo checkout, no Node install, and no terminal.
+
+Build (or rebuild) the DMG:
+
+```bash
+./script/package_dmg.sh          # writes dist/Gnaw.dmg (add --verify for a self-containment smoke test)
+```
+
+To install: open `Gnaw.dmg` and drag **Gnaw** onto **Applications**. Because the app is unsigned (ad-hoc, no notarization), macOS asks for a one-time confirmation on first launch via **System Settings → Privacy & Security → "Open Anyway"** — once per Mac, then it opens like any other app. On first capture, Gnaw reuses an installed Chrome/Edge/Chromium, or offers to download Chromium (~150MB) automatically if none is found.
+
+Full end-user steps are in [`docs/dmg/INSTALL.md`](docs/dmg/INSTALL.md) (and [`docs/dmg/FIRST-LAUNCH.txt`](docs/dmg/FIRST-LAUNCH.txt), which ships inside the DMG).
 
 ## Study Notes
 
@@ -31,6 +51,8 @@ For authenticated sites, Gnaw uses named browser profiles:
 - Profile data is stored outside captured hauls.
 
 ## Requirements
+
+These apply to building from source or running the CLI/engine directly. The packaged macOS app ([Download the macOS app](#download-the-macos-app)) bundles its own Node runtime and downloads Chromium on demand, so it needs none of them.
 
 - Node.js 20+
 - npm
@@ -168,5 +190,5 @@ contract/   JSON Schemas for manifests, events, and waterfall rows
 engine/     TypeScript Playwright capture engine and CLI
 fixtures/   Local fixture sites used by tests
 harness/    Contract validation and golden-snapshot checks
-app/Gnaw/   Reserved macOS app workspace
+app/Gnaw/   SwiftUI macOS app
 ```
