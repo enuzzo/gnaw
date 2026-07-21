@@ -17,6 +17,12 @@ enum EngineClientError: LocalizedError {
     }
 }
 
+struct ResolvedEngine {
+    let node: URL
+    let cli: URL
+    let engineRoot: URL
+}
+
 final class EngineClient {
     private var process: Process?
     private var inputPipe: Pipe?
@@ -31,36 +37,16 @@ final class EngineClient {
         onLog: @escaping (String) -> Void,
         onExit: @escaping (Int32) -> Void
     ) throws {
-        let root = try resolveProjectRoot()
-        let engine = root.appendingPathComponent("dist/engine/src/cli.js")
-        guard FileManager.default.fileExists(atPath: engine.path) else {
-            throw EngineClientError.engineNotBuilt(engine.path)
-        }
-        let node = try resolveNode()
-
-        try FileManager.default.createDirectory(
-            atPath: configuration.outputDirectory,
-            withIntermediateDirectories: true
-        )
-
-        let process = Process()
-        let stdout = Pipe()
-        let stderr = Pipe()
-        let stdin = Pipe()
-        process.executableURL = node
-        process.currentDirectoryURL = root
-        process.arguments = [
-            engine.path,
+        let (process, stdout, stderr, stdin) = try makeProcess(arguments: [
             "capture",
             configuration.url,
             "--mode", configuration.modes,
             "--depth", String(configuration.preset.depth),
             "--max-pages", String(configuration.maxPages),
             "--out", configuration.outputDirectory
-        ]
-        process.standardOutput = stdout
-        process.standardError = stderr
-        process.standardInput = stdin
+        ])
+        try FileManager.default.createDirectory(
+            atPath: configuration.outputDirectory, withIntermediateDirectories: true)
 
         let decoder = JSONDecoder()
         let stdoutReader = NDJSONLineReader(handle: stdout.fileHandleForReading) { line in
@@ -135,6 +121,53 @@ final class EngineClient {
             throw EngineClientError.nodeNotFound
         }
         return URL(fileURLWithPath: path)
+    }
+}
+
+extension EngineClient {
+    static var browserCachePath: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Gnaw/browsers", isDirectory: true)
+    }
+
+    func resolveEngine() throws -> ResolvedEngine {
+        // 1. Bundled resources (packaged app).
+        if let resources = Bundle.main.resourceURL {
+            let engineRoot = resources.appendingPathComponent("engine", isDirectory: true)
+            let cli = engineRoot.appendingPathComponent("dist/engine/src/cli.js")
+            let node = resources.appendingPathComponent("node/bin/node")
+            if FileManager.default.fileExists(atPath: cli.path),
+               FileManager.default.isExecutableFile(atPath: node.path) {
+                return ResolvedEngine(node: node, cli: cli, engineRoot: engineRoot)
+            }
+        }
+        // 2. Dev fallback: repo root + system node (keeps build_and_run.sh working).
+        let root = try resolveProjectRoot()
+        let cli = root.appendingPathComponent("dist/engine/src/cli.js")
+        guard FileManager.default.fileExists(atPath: cli.path) else {
+            throw EngineClientError.engineNotBuilt(cli.path)
+        }
+        let node = try resolveNode()
+        return ResolvedEngine(node: node, cli: cli, engineRoot: root)
+    }
+
+    func makeProcess(arguments: [String]) throws -> (Process, Pipe, Pipe, Pipe) {
+        let resolved = try resolveEngine()
+        try FileManager.default.createDirectory(
+            at: Self.browserCachePath, withIntermediateDirectories: true)
+
+        let process = Process()
+        let stdout = Pipe(), stderr = Pipe(), stdin = Pipe()
+        process.executableURL = resolved.node
+        process.arguments = [resolved.cli.path] + arguments
+        process.currentDirectoryURL = FileManager.default.temporaryDirectory
+        var env = ProcessInfo.processInfo.environment
+        env["PLAYWRIGHT_BROWSERS_PATH"] = Self.browserCachePath.path
+        process.environment = env
+        process.standardOutput = stdout
+        process.standardError = stderr
+        process.standardInput = stdin
+        return (process, stdout, stderr, stdin)
     }
 }
 
