@@ -32,4 +32,21 @@ final class GnawEventTests: XCTestCase {
         XCTAssertEqual(event.type, "browser")
         XCTAssertNil(event.status)
     }
+
+    func testDecodesBrowserDownloadingEvent() throws {
+        let json = #"{"v":2,"type":"browser","status":"downloading","detail":"Downloading browser engine…","progress":0.5}"#
+        let event = try JSONDecoder().decode(GnawEvent.self, from: Data(json.utf8))
+        XCTAssertEqual(event.type, "browser")
+        XCTAssertEqual(event.statusText, "downloading")
+        XCTAssertEqual(event.detail, "Downloading browser engine…")
+        XCTAssertEqual(event.progress, 0.5)
+        XCTAssertNil(event.status) // integer status must stay nil for string status
+    }
+
+    func testDecodesBrowserFoundEvent() throws {
+        let json = #"{"v":2,"type":"browser","status":"found","detail":"Google Chrome"}"#
+        let event = try JSONDecoder().decode(GnawEvent.self, from: Data(json.utf8))
+        XCTAssertEqual(event.statusText, "found")
+        XCTAssertEqual(event.detail, "Google Chrome")
+    }
 }

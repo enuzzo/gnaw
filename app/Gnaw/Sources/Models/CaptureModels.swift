@@ -149,11 +149,15 @@ struct GnawEvent: Decodable {
     let message: String?
     let reason: String?
     let entrypoint: String?
+    let statusText: String?
+    let detail: String?
+    let progress: Double?
 
     private enum CodingKeys: String, CodingKey {
         case v, type, id, url, method, kind, bytes, status, rawPath
         case pages, assets, queued, elapsedMs, state, result, summary
         case haulPath, primary, code, message, reason, entrypoint
+        case detail, progress
     }
 
     init(from decoder: Decoder) throws {
@@ -167,6 +171,9 @@ struct GnawEvent: Decodable {
         bytes = try container.decodeIfPresent(Int64.self, forKey: .bytes)
         // `status` is an integer for asset events and a string for browser events.
         status = try? container.decode(Int.self, forKey: .status)
+        statusText = try? container.decode(String.self, forKey: .status)
+        detail = try container.decodeIfPresent(String.self, forKey: .detail)
+        progress = try container.decodeIfPresent(Double.self, forKey: .progress)
         rawPath = try container.decodeIfPresent(String.self, forKey: .rawPath)
         pages = try container.decodeIfPresent(Int.self, forKey: .pages)
         assets = try container.decodeIfPresent(Int.self, forKey: .assets)
