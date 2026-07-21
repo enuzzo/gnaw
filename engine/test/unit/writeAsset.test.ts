@@ -59,6 +59,25 @@ describe("writeAsset", () => {
     expect(result.bytes).toBe(4);
   });
 
+  it("does not let a smaller/empty body clobber a larger existing capture of the same asset", async () => {
+    const outputRoot = await createHaulRoot();
+    const full = Buffer.from("A".repeat(2048));
+    const opts = {
+      outputRoot,
+      url: "https://fonts.example.com/inter.ttf",
+      contentType: "font/ttf",
+      normalizedPath: "fonts.example.com/inter.ttf"
+    };
+
+    const first = await writeAsset({ ...opts, body: full });
+    const second = await writeAsset({ ...opts, body: Buffer.alloc(0) });
+
+    // The good bytes survive, and the returned metadata reflects what is on disk.
+    expect(await readFile(join(outputRoot, first.rawPath))).toEqual(full);
+    expect(second.bytes).toBe(full.byteLength);
+    expect(second.sha256).toBe(createHash("sha256").update(full).digest("hex"));
+  });
+
   it("rejects normalized paths that would escape study/raw", async () => {
     const outputRoot = await createHaulRoot();
 

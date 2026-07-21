@@ -1,4 +1,6 @@
 import { chromium } from "playwright-core";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
@@ -265,6 +267,62 @@ describe("capture core", () => {
     expect(stdout).toContainEqual(expect.objectContaining({ type: "error", fatal: true }));
     expect(stdout.at(-1)).toMatchObject({ v: 2, type: "done", result: "partial" });
     expect(stderr.join("\n")).toContain("Capture failed");
+  });
+
+  it("continues the crawl and stays partial when a sub-page fails to load", async () => {
+    // Entrypoint links to a dead sub-page FIRST, then a good one. A single failing
+    // sub-page must not abort the whole crawl: the good page is still captured, the
+    // haul is partial with a NON-fatal error, and finalization runs normally.
+    const server = createServer((req, res) => {
+      if (req.url === "/") {
+        res.setHeader("content-type", "text/html");
+        res.end(
+          '<html><head><title>Home</title></head><body>' +
+            '<a href="http://127.0.0.1:1/dead">dead</a>' +
+            '<a href="/good">good</a>' +
+            "</body></html>"
+        );
+      } else if (req.url === "/good") {
+        res.setHeader("content-type", "text/html");
+        res.end("<html><head><title>Good Page</title></head><body>ok</body></html>");
+      } else {
+        res.statusCode = 404;
+        res.end("nope");
+      }
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+    const port = (server.address() as AddressInfo).port;
+    const outDir = await tempRoot();
+    const stdout: unknown[] = [];
+    const stderr: string[] = [];
+
+    try {
+      const result = await captureSite({
+        entrypoint: `http://127.0.0.1:${port}/`,
+        outDir,
+        modes: ["study"],
+        depth: 1,
+        eventSink: (event) => stdout.push(event),
+        logSink: (line) => stderr.push(line)
+      });
+
+      const manifest = JSON.parse(await readFile(join(result.haulPath, "MANIFEST.json"), "utf8"));
+      expect(validateManifest(manifest).valid).toBe(true);
+      expect(manifest.result).toBe("partial");
+
+      const capturedUrls = manifest.pages.map((page: { url: string }) => page.url);
+      expect(capturedUrls).toContain(`http://127.0.0.1:${port}/`);
+      // The crawl continued past the dead sub-page and still captured the good one.
+      expect(capturedUrls).toContain(`http://127.0.0.1:${port}/good`);
+
+      // The failure is recorded per-page and NON-fatal (not a whole-capture abort).
+      expect(manifest.errors.length).toBeGreaterThan(0);
+      expect(manifest.errors.every((entry: { fatal: boolean }) => entry.fatal === false)).toBe(true);
+      expect(stdout.at(-1)).toMatchObject({ v: 2, type: "done", result: "partial" });
+      expect(stderr.join("\n")).not.toContain("Capture failed");
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 
   it("marks the haul partial and emits a warning when an asset exceeds maxAssetBytes", async () => {

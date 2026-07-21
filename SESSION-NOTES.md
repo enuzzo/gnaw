@@ -97,3 +97,46 @@ Made the app self-contained and universal so it can be handed to colleagues (or 
 - New Swift logic tests pass (`EngineClientResolutionTests`, `BrowserDownloadStateTests`, `GnawEventTests`, `HaulLibraryTests`). The 6 `ResultViewRenderTests` HiDPI render tests fail only in headless/off-screen environments — not a regression.
 - `./script/package_dmg.sh --verify`: universal `dist/Gnaw.dmg` (87MB), `codesign verify OK`, self-containment smoke passed (bundled node+engine resources present; app launches from a repo-free copy).
 - Full user/verification docs: [`docs/dmg/INSTALL.md`](docs/dmg/INSTALL.md), [`docs/dmg/VERIFICATION.md`](docs/dmg/VERIFICATION.md).
+
+## 2026-07-22 Capture-integrity + safety hardening
+
+Triggered by a real failure: a captured single-page app (`lampmaker.app`) would not
+run from gnaw's own capture. Root-caused and fixed a cluster of engine bugs, then
+ran a broader multi-perspective audit. Full changelog: [`CHANGELOG.md`](CHANGELOG.md);
+full findings & roadmap: [`docs/reviews/2026-07-21-gnaw-audit.md`](docs/reviews/2026-07-21-gnaw-audit.md).
+
+### Fixed (all TDD)
+
+- **Redaction corrupted captured JS** — `localStorage`/`sessionStorage` rules mistook
+  `===` for assignment and ate across statement boundaries, producing invalid JS that
+  killed a captured app's inline script; also stopped the same rule over-reaching to an
+  unrelated later assignment. (`engine/src/redaction/redact.ts`)
+- **Capture lost asset bytes** — a failed response-body fetch was masked as a 0-byte
+  asset that could clobber a real capture (0-byte fonts); now skipped, plus a
+  `writeAsset` guard against a smaller body overwriting a larger file.
+- **Redaction leaked common secrets** — now redacts OAuth/API JSON keys, quoted/spaced
+  `password` values, and non-Bearer `Authorization:` headers, without over-redacting
+  benign keys or mid-line code.
+- **One failed sub-page aborted the whole crawl** — per-page failures are now non-fatal
+  and the crawl continues (entrypoint stays fatal); fixed a follow-on Playwright race
+  where a failed nav's error page interrupted the next page's load.
+
+### Verification
+
+- Engine suite: 110 unit + 26 integration = **136 tests pass**. Redactor produces valid
+  JS on the real `lampmaker.app` capture; a fresh live re-capture runs offline with full
+  fonts, all presets, no `Uncaught SyntaxError`. Independent check-plan run
+  ([`docs/checks/post-fix-checkplan.md`](docs/checks/post-fix-checkplan.md)) all green.
+- Golden capture refreshed at `rokuro/studies/lampmaker/haul-lampmaker.app-20260721-215814`.
+
+### Housekeeping
+
+- Added a **Release routine** to [`CLAUDE.md`](CLAUDE.md): after significant work, update
+  `CHANGELOG.md` and rebuild the DMG (needs full Xcode).
+- **DMG for this cycle is PENDING** — the shippable `dist/Gnaw.dmg` predates these engine
+  fixes and must be rebuilt with `./script/package_dmg.sh --verify` on the Xcode machine
+  (this dev box has Command Line Tools only). Swift app unchanged; engine-only re-bundle.
+- Note: the working tree's git index had been desynced (files `rm --cached` but present on
+  disk, likely from `.git` syncing through Dropbox across machines). Healed with a plain
+  `git reset` before committing — no content was lost (all affected files were identical
+  to HEAD).

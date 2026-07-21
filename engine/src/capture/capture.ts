@@ -245,7 +245,16 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
         const headers = response.headers();
         Object.assign(responseHeaders, headers);
         const contentType = headers["content-type"] ?? "application/octet-stream";
-        const body = await response.body().catch(() => Buffer.alloc(0));
+        const body = await response.body().catch(() => null);
+        if (body === null) {
+          // Body retrieval failed (e.g. a served-from-cache duplicate reference
+          // or a redirect response). Do not synthesize an empty asset: recording
+          // it would emit a phantom zero-byte manifest record and could clobber a
+          // real capture of the same URL. The first successful reference to this
+          // URL already captured the bytes.
+          log(`Skipped asset with unavailable response body: ${url}`);
+          return;
+        }
         const kind = classifyKind(url, contentType);
         const maxAssetBytes = captureConfig.maxAssetBytes;
         const maxTotalBytes = captureConfig.maxTotalBytes;
@@ -368,6 +377,18 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
       responseTasks.push(task);
     });
 
+    // After a navigation fails, Chromium commits an error page asynchronously.
+    // That in-flight navigation would interrupt the very next page's goto
+    // ("interrupted by another navigation to chrome-error://…"), cascading one bad
+    // page into failing its successor. Wait (bounded) for the pending navigation to
+    // commit — observable as a URL change — so the next goto starts from a settled
+    // page. Do NOT navigate here: a reset navigation just races the same way.
+    const settleAfterFailure = async (urlBeforeFailure: string) => {
+      for (let attempt = 0; attempt < 40 && page.url() === urlBeforeFailure; attempt++) {
+        await page.waitForTimeout(50);
+      }
+    };
+
     const queue: Array<{ url: string; depth: number; discoveredFrom: string | null }> = [
       { url: options.entrypoint, depth: 0, discoveredFrom: null }
     ];
@@ -393,47 +414,68 @@ export async function captureSite(options: CaptureOptions): Promise<CaptureResul
       activePageUrl = current.url;
       seenPageUrls.add(current.url);
       emit({ v: 2, type: "page_start", url: current.url, depth: current.depth });
-      const response = await page.goto(current.url, { waitUntil: "load" });
-      await page.waitForLoadState("networkidle", { timeout: 3000 }).catch(() => undefined);
-      await Promise.allSettled(responseTasks);
-      await addPageStorageSecrets(page, redactor);
-      const rawHtml = await page.content();
-      const html = redactor.redactText(rawHtml);
-      const renderedPath = wantsStudy ? `study/rendered/${normalizer.normalizeRendered(current.url).relativePath}` : undefined;
-      if (renderedPath) {
-        await writeRenderedSnapshot({ haulPath, renderedPath, html });
-      }
-      pageHtml.set(current.url, html);
-
-      pages.push({
-        url: current.url,
-        title: extractTitle(html),
-        depth: current.depth,
-        status: response?.status() ?? 0,
-        discoveredFrom: current.discoveredFrom,
-        ...(renderedPath ? { renderedPath } : {})
-      });
-
-      emit({ v: 2, type: "page_done", url: current.url, title: pages[pages.length - 1].title, assets: assets.length });
-      emit({ v: 2, type: "progress", pages: pages.length, assets: assets.length, bytes: totalBytes, queued: queue.length, elapsedMs: Date.now() - started });
-
-      if (current.depth < captureConfig.depth) {
-        for (const link of extractNavigationLinks(rawHtml, current.url)) {
-          if (seenPageUrls.has(link) || queue.some((queued) => queued.url === link)) {
-            continue;
-          }
-          if (new URL(link).hostname.toLowerCase() !== host) {
-            skippedUrls.push({ url: link, reason: "out_of_scope" });
-            emit({ v: 2, type: "skip", url: link, reason: "out_of_scope" });
-            continue;
-          }
-          if (isBlockedNavigationUrl(link, options.blockPatterns)) {
-            skippedUrls.push({ url: link, reason: "blocked_pattern" });
-            emit({ v: 2, type: "skip", url: link, reason: "blocked_pattern" });
-            continue;
-          }
-          queue.push({ url: link, depth: current.depth + 1, discoveredFrom: current.url });
+      const urlBeforeGoto = page.url();
+      try {
+        const response = await page.goto(current.url, { waitUntil: "load" });
+        await page.waitForLoadState("networkidle", { timeout: 3000 }).catch(() => undefined);
+        await Promise.allSettled(responseTasks);
+        await addPageStorageSecrets(page, redactor);
+        const rawHtml = await page.content();
+        const html = redactor.redactText(rawHtml);
+        const renderedPath = wantsStudy ? `study/rendered/${normalizer.normalizeRendered(current.url).relativePath}` : undefined;
+        if (renderedPath) {
+          await writeRenderedSnapshot({ haulPath, renderedPath, html });
         }
+        pageHtml.set(current.url, html);
+
+        pages.push({
+          url: current.url,
+          title: extractTitle(html),
+          depth: current.depth,
+          status: response?.status() ?? 0,
+          discoveredFrom: current.discoveredFrom,
+          ...(renderedPath ? { renderedPath } : {})
+        });
+
+        emit({ v: 2, type: "page_done", url: current.url, title: pages[pages.length - 1].title, assets: assets.length });
+        emit({ v: 2, type: "progress", pages: pages.length, assets: assets.length, bytes: totalBytes, queued: queue.length, elapsedMs: Date.now() - started });
+
+        if (current.depth < captureConfig.depth) {
+          for (const link of extractNavigationLinks(rawHtml, current.url)) {
+            if (seenPageUrls.has(link) || queue.some((queued) => queued.url === link)) {
+              continue;
+            }
+            if (new URL(link).hostname.toLowerCase() !== host) {
+              skippedUrls.push({ url: link, reason: "out_of_scope" });
+              emit({ v: 2, type: "skip", url: link, reason: "out_of_scope" });
+              continue;
+            }
+            if (isBlockedNavigationUrl(link, options.blockPatterns)) {
+              skippedUrls.push({ url: link, reason: "blocked_pattern" });
+              emit({ v: 2, type: "skip", url: link, reason: "blocked_pattern" });
+              continue;
+            }
+            queue.push({ url: link, depth: current.depth + 1, discoveredFrom: current.url });
+          }
+        }
+      } catch (error) {
+        if (options.signal?.aborted || canceled) {
+          throw error;
+        }
+        if (current.depth === 0) {
+          // The entrypoint itself is unreachable — there is nothing to capture, so
+          // this remains a fatal abort (handled by the outer catch).
+          throw error;
+        }
+        // A single discovered sub-page failed (nav timeout, DNS, connection
+        // refused, crash). Record it per-page, keep the haul partial, and keep
+        // crawling the rest instead of dropping every remaining page.
+        setPartial();
+        const record = toCaptureError(error, current.url, false);
+        errors.push(record);
+        emit({ v: 2, type: "error", ...record });
+        log(`Capture warning: ${record.message}`);
+        await settleAfterFailure(urlBeforeGoto);
       }
     }
 

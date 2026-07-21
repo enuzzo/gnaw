@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstat, mkdir, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
 export type NormalizeAssetPath = (url: string, contentType?: string | null) => string;
@@ -42,12 +42,30 @@ export async function writeAsset(options: WriteAssetOptions): Promise<WriteAsset
 
   await ensureSafeDirectory(outputRoot, [...rootParts, ...pathParts.slice(0, -1)]);
   await assertNotSymlink(absolutePath);
+
+  const rawPath = `${rootParts.join("/")}/${safeRelativePath}`;
+
+  // Capture-race guard: two response events can resolve to the same asset path
+  // (e.g. a second, served-from-cache reference whose body could not be
+  // retrieved and arrives as an empty buffer). Never let a smaller body clobber
+  // a larger existing capture of the same asset; keep the good bytes and report
+  // what is actually on disk.
+  const existing = await lstat(absolutePath).catch(() => null);
+  if (existing?.isFile() && existing.size > body.byteLength) {
+    const kept = await readFile(absolutePath);
+    return {
+      bytes: kept.byteLength,
+      sha256: createHash("sha256").update(kept).digest("hex"),
+      rawPath
+    };
+  }
+
   await writeFile(absolutePath, body);
 
   return {
     bytes: body.byteLength,
     sha256: createHash("sha256").update(body).digest("hex"),
-    rawPath: `${rootParts.join("/")}/${safeRelativePath}`
+    rawPath
   };
 }
 

@@ -1,4 +1,5 @@
 const redacted = "[REDACTED]";
+const minimumDynamicSecretLength = 8;
 
 const sensitiveQueryKeys = new Set([
   "access_token",
@@ -32,7 +33,11 @@ export function redactObject<T>(value: T): T {
 export function createRedactor(initialSecrets: string[] = []): Redactor {
   const secrets = new Set<string>();
   const addSecret = (secret: string | null | undefined) => {
-    if (secret && secret.length > 0) {
+    // Blanket substring replacement is only safe for token-like values. A common
+    // preference cookie such as "1" would otherwise corrupt timestamps, counts,
+    // paths, and captured source throughout the haul. Credential-bearing headers,
+    // URLs, password fields, and storage syntax are still redacted structurally.
+    if (secret && secret.length >= minimumDynamicSecretLength) {
       secrets.add(secret);
     }
   };
@@ -46,14 +51,21 @@ export function createRedactor(initialSecrets: string[] = []): Redactor {
       let output = value.replace(/\bhttps?:\/\/[^\s"'<>]+/gi, (match) => redactUrl(match));
 
       output = output
-        .replace(/(\bAuthorization\s*[:=]\s*)(?:Bearer|Basic)\s+[^\s,;"']+/gi, `$1${redacted}`)
+        // Real Authorization headers occupy a whole line; anchoring to line start
+        // covers any scheme (Bearer, Basic, token, GenieKey, raw key) without
+        // matching an "Authorization" mention embedded mid-line in captured code.
+        .replace(/((?:^|[\r\n])[ \t]*Authorization\s*[:=]\s*)(?:[A-Za-z][\w-]*[ \t]+)?[^\r\n]+/gi, `$1${redacted}`)
         .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, `Bearer ${redacted}`)
         .replace(/(\b(?:Cookie|Set-Cookie)\s*:\s*)[^\r\n]+/gi, `$1${redacted}`)
-        .replace(/(\bpassword\s*[:=]\s*)[^\s&,"\n]+/gi, `$1${redacted}`)
+        .replace(/(\bpassword\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s&,;"'\n]+)/gi, `$1${redacted}`)
         .replace(/(\b(?:localStorage|sessionStorage)\.setItem\(\s*["'][^"']+["']\s*,\s*)(["'])[^"']*(\2\s*\))/gi, `$1$2${redacted}$3`)
-        .replace(/(\blocalStorage\b[^\n=]*=\s*)[^\s,"\n]+/gi, `$1${redacted}`)
-        .replace(/(\bsessionStorage\b[^\n=]*=\s*)[^\s,"\n]+/gi, `$1${redacted}`)
-        .replace(/("(?:authorization|cookie|localStorage|password|sessionStorage|token)"\s*:\s*)"[^"]*"/gi, `$1"${redacted}"`)
+        .replace(/(\blocalStorage\b(?:\s*\.\s*[\w$]+|\s*\[\s*(?:"[^"]*"|'[^']*')\s*\]|\s+[\w$]+)?\s*(?<![=!<>])=(?!=)\s*)(?:"[^"]*"|'[^']*'|[^\s,;'"]+)/gi, `$1${redacted}`)
+        .replace(/(\bsessionStorage\b(?:\s*\.\s*[\w$]+|\s*\[\s*(?:"[^"]*"|'[^']*')\s*\]|\s+[\w$]+)?\s*(?<![=!<>])=(?!=)\s*)(?:"[^"]*"|'[^']*'|[^\s,;'"]+)/gi, `$1${redacted}`)
+        // Match sensitive JSON keys either exactly or by a credential-bearing
+        // suffix (access_token, csrfToken, client_secret, x-api-key, …). The
+        // suffix arm is anchored by the closing quote so "author", "session_active",
+        // and "idempotency_key" are left untouched.
+        .replace(/("(?:authorization|auth|cookie|set-cookie|bearer|session|sessionid|session[_-]?id|sid|localStorage|sessionStorage|[\w-]*(?:token|secret|password|passwd|pwd|apikey|api[_-]?key|credentials?))"\s*:\s*)"[^"]*"/gi, `$1"${redacted}"`)
         .replace(/(<input\b(?=[^>]*\btype\s*=\s*["']password["'])[^>]*\bvalue\s*=\s*)(["'])[^"']*(\2)/gi, `$1$2${redacted}$3`)
         .replace(/(<input\b(?=[^>]*\btype\s*=\s*["']?password\b)[^>]*\bvalue\s*=\s*)([^"'\s>]+)/gi, `$1${redacted}`);
 
