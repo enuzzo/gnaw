@@ -145,3 +145,54 @@ piece of work. If neither is available, the expected outcome is a
 "No supported browser engine found" error, which is not a failure of this
 task's scope (bundle self-containment / launchability) but rather the known
 gap that Phase B is meant to close.
+
+## Phase B: final packaging run (browser auto-download included)
+
+Phase B added the engine's `gnaw browser check` / `gnaw browser ensure`
+subcommands and the app's warn-then-download flow (`EngineClient.checkBrowser`
+/ `EngineClient.ensureBrowser` in
+`app/Gnaw/Sources/Services/EngineClient.swift`, consumed by `AppModel` in
+`app/Gnaw/Sources/Stores/AppModel.swift` and surfaced as the "Download
+browser engine?" alert in `app/Gnaw/Sources/Views/NewCaptureView.swift`).
+These are the engine commands backing the app's download flow described in
+[`INSTALL.md`](INSTALL.md): `browser check` reports whether a supported
+Chromium-family browser is already available, and `browser ensure` performs
+the ~150MB Chromium download (streaming progress via the existing `browser`
+NDJSON event type) into the cache at
+`~/Library/Application Support/Gnaw/browsers`.
+
+This task (Task 10) reran the full packaging pipeline from scratch so the
+shipped DMG includes this Phase B code, then re-executed the same
+`--verify` smoke step documented above.
+
+### Result (run on 2026-07-21, Phase B)
+
+Command: `./script/package_dmg.sh --verify`
+
+The run completed all 7 packaging steps (engine build, staged production
+engine tree, cached universal node reuse, universal Release xcodebuild,
+embed + ad-hoc codesign, DMG creation) followed by the smoke step, ending
+with the four expected success lines:
+
+```
+codesign verify OK
+created: /Users/enuzzo/Library/CloudStorage/Dropbox/Mitnick/gnaw/dist/Gnaw.dmg
+==> smoke: launch packaged app from a copy, no repo env
+smoke: bundled node + engine resources present in the copy
+smoke OK: packaged Gnaw launched from a repo-free copy (pid 27617)
+Built /Users/enuzzo/Library/CloudStorage/Dropbox/Mitnick/gnaw/dist/Gnaw.dmg
+```
+
+Final DMG size:
+
+```
+$ ls -lh dist/Gnaw.dmg
+-rw-r--r--@ 1 enuzzo  staff    87M Jul 21 13:11 dist/Gnaw.dmg
+```
+
+As with the earlier run, this proves the packaged app bundle contains its
+Node + engine resources (now including the Phase B `browser` subcommands)
+and launches cleanly outside the repo tree. It does not itself exercise a
+live Chromium download — see "Manual: end-to-end capture from a copied app"
+above for the manual, GUI-driven check that would exercise
+`browser check` / `browser ensure` against a real network.
