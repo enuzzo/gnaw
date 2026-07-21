@@ -1,0 +1,14 @@
+Opening Gnaw the first time
+===========================
+
+Gnaw is a free, unsigned app, so on first launch macOS asks you to confirm it.
+You only do this ONCE per Mac. After that it opens like any normal app.
+
+1. Drag Gnaw onto the Applications folder (in this window).
+2. Open Applications and double-click Gnaw. macOS will say it can't verify it.
+3. Open  Menu > System Settings > Privacy & Security.
+4. Scroll down to the message about "Gnaw" and click "Open Anyway".
+5. Confirm. Gnaw opens — and stays trusted from now on.
+
+The first time you capture a site, if no browser engine is found, Gnaw offers to
+download one (~150MB). That download happens automatically with a progress bar.
