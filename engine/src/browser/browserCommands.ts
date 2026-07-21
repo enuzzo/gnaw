@@ -52,16 +52,22 @@ async function defaultInstallChromium(): Promise<void> {
       stdio: ["ignore", "inherit", "inherit"],
       env: process.env
     });
+    const onSigterm = () => child.kill("SIGKILL");
+    process.once("SIGTERM", onSigterm);
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
       reject(new Error("Chromium download timed out"));
     }, INSTALL_CHROMIUM_TIMEOUT_MS);
-    child.on("error", (error) => {
+    const cleanup = () => {
       clearTimeout(timer);
+      process.removeListener("SIGTERM", onSigterm);
+    };
+    child.on("error", (error) => {
+      cleanup();
       reject(error);
     });
     child.on("exit", (code) => {
-      clearTimeout(timer);
+      cleanup();
       code === 0 ? resolve() : reject(new Error(`chromium install failed (exit ${code})`));
     });
   });

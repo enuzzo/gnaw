@@ -180,7 +180,9 @@ extension EngineClient {
             let (process, _, _, _) = try makeProcess(arguments: ["browser", "check"])
             process.terminationHandler = { [weak self] proc in
                 completion(proc.terminationStatus == 0)
-                self?.checkProcess = nil
+                DispatchQueue.main.async {
+                    self?.checkProcess = nil
+                }
             }
             self.checkProcess = process
             try process.run()
@@ -207,9 +209,11 @@ extension EngineClient {
                 reader.finish()
                 stderrReader.finish()
                 onExit(proc.terminationStatus)
-                self?.ensureProcess = nil
-                self?.ensureReader = nil
-                self?.ensureStderrReader = nil
+                DispatchQueue.main.async {
+                    self?.ensureProcess = nil
+                    self?.ensureReader = nil
+                    self?.ensureStderrReader = nil
+                }
             }
             self.ensureReader = reader
             self.ensureStderrReader = stderrReader
@@ -218,6 +222,11 @@ extension EngineClient {
             stderrReader.start()
             try process.run()
         } catch {
+            ensureReader?.finish()
+            ensureStderrReader?.finish()
+            ensureReader = nil
+            ensureStderrReader = nil
+            ensureProcess = nil
             onExit(-1)
         }
     }

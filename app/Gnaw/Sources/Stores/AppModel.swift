@@ -36,6 +36,7 @@ final class AppModel: ObservableObject {
     private let engine = EngineClient()
     private let haulLibrary = HaulLibrary()
     private var receivedDone = false
+    private var browserDownloadCancelled = false
     private static let outputDirectoryDefaultsKey = "captureOutputDirectory"
 
     init() {
@@ -167,28 +168,35 @@ final class AppModel: ObservableObject {
     }
 
     func confirmBrowserDownload() {
+        browserDownloadCancelled = false
         browserDownload = .downloading("Preparing…")
         engine.ensureBrowser(
             onEvent: { [weak self] event in
                 DispatchQueue.main.async { self?.consumeBrowserEvent(event) }
             },
             onExit: { [weak self] status in
-                DispatchQueue.main.async {
-                    guard let self else { return }
-                    if status == 0 {
-                        self.browserDownload = .idle
-                        self.beginEngineCapture()
-                    } else {
-                        self.browserDownload = .failed(
-                            "Couldn't download the browser engine. Check your internet connection and try again.")
-                    }
-                }
+                DispatchQueue.main.async { self?.finishBrowserDownload(status) }
             }
         )
     }
 
+    func finishBrowserDownload(_ status: Int32) {
+        if browserDownloadCancelled {
+            browserDownloadCancelled = false
+            return
+        }
+        if status == 0 {
+            browserDownload = .idle
+            beginEngineCapture()
+        } else {
+            browserDownload = .failed(
+                "Couldn't download the browser engine. Check your internet connection and try again.")
+        }
+    }
+
     func cancelBrowserDownload() {
         browserDownload = .idle
+        browserDownloadCancelled = true
         engine.cancelBrowserDownload()
     }
 
