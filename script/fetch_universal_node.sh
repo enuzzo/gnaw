@@ -22,7 +22,9 @@ for ARCH in arm64 x64; do
 done
 
 mkdir -p "$DEST/bin"
-lipo -create "$TMP/arm64/bin/node" "$TMP/x64/bin/node" -output "$DEST/bin/node"
-chmod +x "$DEST/bin/node"
-codesign --force --sign - "$DEST/bin/node"
+TMP_NODE="$TMP/node.universal"
+lipo -create "$TMP/arm64/bin/node" "$TMP/x64/bin/node" -output "$TMP_NODE"
+chmod +x "$TMP_NODE"
+codesign --force --sign - "$TMP_NODE"
+mv "$TMP_NODE" "$DEST/bin/node"
 lipo -info "$DEST/bin/node"
