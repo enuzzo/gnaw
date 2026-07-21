@@ -10,6 +10,8 @@ import { loginProfile } from "./auth/login.js";
 import { buildBlockPatterns } from "./safety/blocklist.js";
 import { analyzeScenario } from "./scenario/analyze.js";
 import { renderScenarioReport } from "./scenario/report.js";
+import { checkBrowser, ensureBrowser } from "./browser/browserCommands.js";
+import { resolveBrowser as defaultResolveBrowser, type ResolvedBrowser } from "./browser/resolveBrowser.js";
 export { engineIdentity } from "./identity.js";
 
 export type AuthLogin = (options: { url: string; profileName: string; store: ProfileStore }) => Promise<ProfileMetadata>;
@@ -21,6 +23,8 @@ export type CliDependencies = {
   capture?: (options: CaptureOptions) => Promise<CaptureResult>;
   profileStore?: ProfileStore;
   authLogin?: AuthLogin;
+  resolveBrowser?: () => ResolvedBrowser;
+  installBrowser?: () => Promise<void>;
 };
 
 export async function runCli(argv = process.argv, dependencies: CliDependencies = {}): Promise<void> {
@@ -33,7 +37,9 @@ export function createCliProgram({
   stderr = process.stderr,
   capture = captureSite,
   profileStore = createProfileStore(),
-  authLogin = loginProfile
+  authLogin = loginProfile,
+  resolveBrowser = defaultResolveBrowser,
+  installBrowser
 }: CliDependencies = {}): Command {
   const program = new Command();
 
@@ -146,6 +152,29 @@ export function createCliProgram({
         malformedRows: analysis.malformedRows
       });
     });
+
+  const browser = program.command("browser");
+
+  browser.command("check").action(() => {
+    const writer = createEventWriter({ stdout, stderr });
+    const result = checkBrowser({ resolveBrowser });
+    if (result.found) {
+      writer.event({ v: 2, type: "browser", status: "found", detail: result.detail });
+    } else {
+      writer.log("No supported browser engine found.");
+      process.exitCode = 3;
+    }
+  });
+
+  browser.command("ensure").action(async () => {
+    const writer = createEventWriter({ stdout, stderr });
+    try {
+      await ensureBrowser((event) => writer.event(event), { resolveBrowser, installChromium: installBrowser });
+    } catch (error) {
+      writer.log(error instanceof Error ? error.message : String(error));
+      process.exitCode = 4;
+    }
+  });
 
   return program;
 }

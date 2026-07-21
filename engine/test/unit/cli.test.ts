@@ -24,6 +24,7 @@ describe("CLI surface", () => {
 
     expect(program.commands.map((command) => command.name()).sort()).toEqual([
       "auth",
+      "browser",
       "capture",
       "scenario"
     ]);
