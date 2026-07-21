@@ -29,6 +29,8 @@ final class EngineClient {
     private var stdoutReader: NDJSONLineReader?
     private var stderrReader: NDJSONLineReader?
     private var ensureReader: NDJSONLineReader?
+    private var checkProcess: Process?
+    private var ensureProcess: Process?
 
     var isRunning: Bool { process?.isRunning == true }
 
@@ -176,6 +178,7 @@ extension EngineClient {
         do {
             let (process, _, _, _) = try makeProcess(arguments: ["browser", "check"])
             process.terminationHandler = { proc in completion(proc.terminationStatus == 0) }
+            self.checkProcess = process
             try process.run()
         } catch {
             completion(false)
@@ -197,6 +200,7 @@ extension EngineClient {
             }
             process.terminationHandler = { proc in reader.finish(); onExit(proc.terminationStatus) }
             self.ensureReader = reader
+            self.ensureProcess = process
             reader.start()
             try process.run()
         } catch {
