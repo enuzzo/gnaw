@@ -1,6 +1,13 @@
 import AppKit
 import Foundation
 
+enum BrowserDownloadState: Equatable {
+    case idle
+    case confirming
+    case downloading(String)
+    case failed(String)
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published var phase: CapturePhase = .setup
@@ -23,6 +30,7 @@ final class AppModel: ObservableObject {
     @Published var hauls: [HaulRecord] = []
     @Published var sidebarSelection: SidebarSelection? = .newCapture
     @Published var unreadableManifestCount = 0
+    @Published var browserDownload: BrowserDownloadState = .idle
 
     private let engine = EngineClient()
     private let haulLibrary = HaulLibrary()
@@ -123,6 +131,17 @@ final class AppModel: ObservableObject {
         openFolder(at: haul.path)
     }
 
+    func consumeBrowserEvent(_ event: GnawEvent) {
+        switch event.statusText {
+        case "downloading":
+            browserDownload = .downloading(event.detail ?? "Downloading browser engine…")
+        case "found":
+            browserDownload = .idle
+        default:
+            break
+        }
+    }
+
     func startCapture() {
         guard canStart else {
             errorMessage = "Enter the website address you want to capture."
@@ -131,28 +150,41 @@ final class AppModel: ObservableObject {
         configuration.url = normalizedURL(configuration.url)
         commitOutputDirectory()
         resetJob()
-        phase = .capturing
-        sidebarSelection = .currentCapture
-        engineState = "starting"
-
-        do {
-            try engine.start(
-                configuration: configuration,
-                onEvent: { [weak self] event in
-                    DispatchQueue.main.async { self?.consume(event) }
-                },
-                onLog: { [weak self] line in
-                    DispatchQueue.main.async { self?.appendLog(line) }
-                },
-                onExit: { [weak self] status in
-                    DispatchQueue.main.async { self?.engineExited(status) }
+        engine.checkBrowser { [weak self] hasBrowser in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if hasBrowser {
+                    self.beginEngineCapture()
+                } else {
+                    self.browserDownload = .confirming
                 }
-            )
-        } catch {
-            errorMessage = error.localizedDescription
-            phase = .setup
-            engineState = "failed"
+            }
         }
+    }
+
+    func confirmBrowserDownload() {
+        browserDownload = .downloading("Preparing…")
+        engine.ensureBrowser(
+            onEvent: { [weak self] event in
+                DispatchQueue.main.async { self?.consumeBrowserEvent(event) }
+            },
+            onExit: { [weak self] status in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    if status == 0 {
+                        self.browserDownload = .idle
+                        self.beginEngineCapture()
+                    } else {
+                        self.browserDownload = .failed(
+                            "Couldn't download the browser engine. Check your internet connection and try again.")
+                    }
+                }
+            }
+        )
+    }
+
+    func cancelBrowserDownload() {
+        browserDownload = .idle
     }
 
     func togglePause() {
@@ -193,6 +225,24 @@ final class AppModel: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(context, forType: .string)
         actionMessage = "Study context copied"
+    }
+
+    private func beginEngineCapture() {
+        phase = .capturing
+        sidebarSelection = .currentCapture
+        engineState = "starting"
+        do {
+            try engine.start(
+                configuration: configuration,
+                onEvent: { [weak self] event in DispatchQueue.main.async { self?.consume(event) } },
+                onLog: { [weak self] line in DispatchQueue.main.async { self?.appendLog(line) } },
+                onExit: { [weak self] status in DispatchQueue.main.async { self?.engineExited(status) } }
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+            phase = .setup
+            engineState = "failed"
+        }
     }
 
     private func resetJob() {

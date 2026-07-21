@@ -40,6 +40,33 @@ struct NewCaptureView: View {
                 model.setOutputDirectory(directory)
             }
         }
+        .alert("Download browser engine?", isPresented: Binding(
+            get: { model.browserDownload == .confirming },
+            set: { if !$0 { model.cancelBrowserDownload() } }
+        )) {
+            Button("Download") { model.confirmBrowserDownload() }
+            Button("Cancel", role: .cancel) { model.cancelBrowserDownload() }
+        } message: {
+            Text("Gnaw needs a browser engine to capture sites and none was found. Download Chromium now? This is a one-time ~150MB download.")
+        }
+        .overlay {
+            if case .downloading(let detail) = model.browserDownload {
+                VStack(spacing: 12) {
+                    ProgressView().controlSize(.large)
+                    Text(detail).font(.callout).foregroundStyle(.secondary)
+                }
+                .padding(24)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .alert("Download failed", isPresented: Binding(
+            get: { if case .failed = model.browserDownload { return true } else { return false } },
+            set: { if !$0 { model.cancelBrowserDownload() } }
+        )) {
+            Button("OK", role: .cancel) { model.cancelBrowserDownload() }
+        } message: {
+            if case .failed(let message) = model.browserDownload { Text(message) }
+        }
     }
 
     private var header: some View {

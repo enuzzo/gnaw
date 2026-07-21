@@ -28,6 +28,7 @@ final class EngineClient {
     private var inputPipe: Pipe?
     private var stdoutReader: NDJSONLineReader?
     private var stderrReader: NDJSONLineReader?
+    private var ensureReader: NDJSONLineReader?
 
     var isRunning: Bool { process?.isRunning == true }
 
@@ -168,6 +169,39 @@ extension EngineClient {
         process.standardError = stderr
         process.standardInput = stdin
         return (process, stdout, stderr, stdin)
+    }
+
+    /// Runs `gnaw browser check`. Calls back with true if a browser is available.
+    func checkBrowser(completion: @escaping (Bool) -> Void) {
+        do {
+            let (process, _, _, _) = try makeProcess(arguments: ["browser", "check"])
+            process.terminationHandler = { proc in completion(proc.terminationStatus == 0) }
+            try process.run()
+        } catch {
+            completion(false)
+        }
+    }
+
+    /// Runs `gnaw browser ensure`, streaming `browser` events via onEvent.
+    func ensureBrowser(
+        onEvent: @escaping (GnawEvent) -> Void,
+        onExit: @escaping (Int32) -> Void
+    ) {
+        do {
+            let (process, stdout, _, _) = try makeProcess(arguments: ["browser", "ensure"])
+            let decoder = JSONDecoder()
+            let reader = NDJSONLineReader(handle: stdout.fileHandleForReading) { line in
+                guard let data = line.data(using: .utf8),
+                      let event = try? decoder.decode(GnawEvent.self, from: data) else { return }
+                onEvent(event)
+            }
+            process.terminationHandler = { proc in reader.finish(); onExit(proc.terminationStatus) }
+            self.ensureReader = reader
+            reader.start()
+            try process.run()
+        } catch {
+            onExit(-1)
+        }
     }
 }
 
