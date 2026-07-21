@@ -68,4 +68,16 @@ ln -s /Applications "$STAGE_DMG/Applications"
 cp "$ROOT_DIR/docs/dmg/FIRST-LAUNCH.txt" "$STAGE_DMG/How to open Gnaw.txt"
 hdiutil create -volname "$APP_NAME" -srcfolder "$STAGE_DMG" -ov -format UDZO "$DMG_PATH"
 
+if [[ "${1:-}" == "--verify" ]]; then
+  echo "==> smoke: launch packaged app from a copy, no repo env"
+  SMOKE_DIR="$(mktemp -d)"
+  cp -R "$APP_BUNDLE" "$SMOKE_DIR/"
+  ( unset GNAW_PROJECT_ROOT GNAW_NODE
+    /usr/bin/open -n "$SMOKE_DIR/$APP_NAME.app" )
+  sleep 3
+  pgrep -x "$APP_NAME" >/dev/null && echo "smoke OK: $APP_NAME is running"
+  pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+  rm -rf "$SMOKE_DIR"
+fi
+
 echo "Built $DMG_PATH"
