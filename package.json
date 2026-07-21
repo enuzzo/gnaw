@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "postbuild": "node script/copy-engine-assets.mjs",
     "test": "vitest run",
     "test:unit": "vitest run engine/test/unit harness/test/unit",
     "test:integration": "vitest run engine/test/integration harness/test/integration --passWithNoTests",
