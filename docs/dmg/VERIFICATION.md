@@ -13,12 +13,20 @@ after building the DMG it:
 
 1. Copies the freshly built `Gnaw.app` out of the repo tree into a `mktemp -d`
    scratch directory.
-2. Launches that copy with `open -n`, in a subshell with `GNAW_PROJECT_ROOT`
+2. Eagerly asserts the copy's bundled resources exist: the bundled Node
+   executable (`Contents/Resources/node/bin/node`) and the engine's compiled
+   CLI entrypoint and stack-detection data file
+   (`Contents/Resources/engine/dist/engine/src/cli.js` and
+   `.../stack/stacks.json`).
+3. Launches that copy with `open -n`, in a subshell with `GNAW_PROJECT_ROOT`
    and `GNAW_NODE` explicitly unset.
-3. Waits 3 seconds, then checks `pgrep -x Gnaw` to confirm the process is
-   actually running.
-4. Prints `smoke OK: Gnaw is running` on success, kills the process, and
-   removes the scratch copy.
+4. Waits 3 seconds, then uses `pgrep -f` scoped to the scratch directory's
+   path to confirm that *this specific copy* — not just any Gnaw process
+   that happened to be running — actually launched.
+5. Prints `smoke OK: packaged Gnaw launched ...` on success and kills only
+   that copy's process (by PID, not by name), leaving any other running
+   Gnaw instance untouched. A `trap` on `EXIT` removes the scratch copy
+   even if an earlier assertion fails.
 
 Run it with:
 
@@ -31,10 +39,14 @@ fetch/cache check, xcodebuild universal Release build, ad-hoc signing, DMG
 creation — roughly 2-3 minutes) and only then runs the smoke step. The smoke
 step alone is fast; the packaging step dominates the wall-clock time.
 
-This proves the universal app bundle launches and finds its bundled
-resources (Node + engine) outside the repo. It does **not** exercise an
-actual capture — the app only starts its engine process when the user
-initiates one from its setup screen — so this is a launch/resource-resolution
+This proves two things: (a) the copied app bundle actually contains its
+bundled resources (Node + engine files), verified by direct file assertions,
+and (b) the universal app bundle launches cleanly outside the repo tree with
+no repo environment variables set. It does **not** exercise an actual
+capture, and it does **not** prove the running process successfully resolves
+and invokes those resources at runtime — the app only calls
+`resolveEngine()` and starts its engine process when the user initiates a
+capture from its setup screen. So this is a resource-presence-plus-launch
 smoke test, not an end-to-end capture test. See "Manual" below for that.
 
 ### Result (run on 2026-07-21)
@@ -47,7 +59,8 @@ Relevant tail of output:
 ==> 7/7 build DMG
 created: /Users/enuzzo/Library/CloudStorage/Dropbox/Mitnick/gnaw/dist/Gnaw.dmg
 ==> smoke: launch packaged app from a copy, no repo env
-smoke OK: Gnaw is running
+smoke: bundled node + engine resources present in the copy
+smoke OK: packaged Gnaw launched from a repo-free copy (pid 15062)
 Built /Users/enuzzo/Library/CloudStorage/Dropbox/Mitnick/gnaw/dist/Gnaw.dmg
 ```
 

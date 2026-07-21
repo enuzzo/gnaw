@@ -71,13 +71,28 @@ hdiutil create -volname "$APP_NAME" -srcfolder "$STAGE_DMG" -ov -format UDZO "$D
 if [[ "${1:-}" == "--verify" ]]; then
   echo "==> smoke: launch packaged app from a copy, no repo env"
   SMOKE_DIR="$(mktemp -d)"
+  trap 'rm -rf "$SMOKE_DIR"' EXIT
   cp -R "$APP_BUNDLE" "$SMOKE_DIR/"
+  SMOKE_APP="$SMOKE_DIR/$APP_NAME.app"
+
+  # Eagerly assert the copied bundle is self-contained (bundled node + engine).
+  test -x "$SMOKE_APP/Contents/Resources/node/bin/node"
+  test -f "$SMOKE_APP/Contents/Resources/engine/dist/engine/src/cli.js"
+  test -f "$SMOKE_APP/Contents/Resources/engine/dist/engine/src/stack/stacks.json"
+  echo "smoke: bundled node + engine resources present in the copy"
+
+  # Launch the copy with no repo env, then confirm THIS copy's process is running.
   ( unset GNAW_PROJECT_ROOT GNAW_NODE
-    /usr/bin/open -n "$SMOKE_DIR/$APP_NAME.app" )
+    /usr/bin/open -n "$SMOKE_APP" )
   sleep 3
-  pgrep -x "$APP_NAME" >/dev/null && echo "smoke OK: $APP_NAME is running"
-  pkill -x "$APP_NAME" >/dev/null 2>&1 || true
-  rm -rf "$SMOKE_DIR"
+  SMOKE_PID="$(pgrep -f "$SMOKE_DIR/$APP_NAME.app" || true)"
+  if [[ -n "$SMOKE_PID" ]]; then
+    echo "smoke OK: packaged $APP_NAME launched from a repo-free copy (pid $SMOKE_PID)"
+    kill $SMOKE_PID 2>/dev/null || true
+  else
+    echo "smoke FAILED: packaged $APP_NAME did not launch from the copy" >&2
+    exit 1
+  fi
 fi
 
 echo "Built $DMG_PATH"
