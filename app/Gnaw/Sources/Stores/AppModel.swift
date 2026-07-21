@@ -3,6 +3,7 @@ import Foundation
 
 enum BrowserDownloadState: Equatable {
     case idle
+    case checking
     case confirming
     case downloading(String)
     case failed(String)
@@ -147,13 +148,16 @@ final class AppModel: ObservableObject {
             errorMessage = "Enter the website address you want to capture."
             return
         }
+        guard browserDownload == .idle else { return }
         configuration.url = normalizedURL(configuration.url)
         commitOutputDirectory()
         resetJob()
+        browserDownload = .checking
         engine.checkBrowser { [weak self] hasBrowser in
             DispatchQueue.main.async {
                 guard let self else { return }
                 if hasBrowser {
+                    self.browserDownload = .idle
                     self.beginEngineCapture()
                 } else {
                     self.browserDownload = .confirming
@@ -185,6 +189,7 @@ final class AppModel: ObservableObject {
 
     func cancelBrowserDownload() {
         browserDownload = .idle
+        engine.cancelBrowserDownload()
     }
 
     func togglePause() {

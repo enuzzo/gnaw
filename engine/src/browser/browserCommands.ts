@@ -41,6 +41,8 @@ export async function ensureBrowser(
   emit({ v: 2, type: "browser", status: "found", detail: resolveBrowser().label });
 }
 
+const INSTALL_CHROMIUM_TIMEOUT_MS = 10 * 60 * 1000;
+
 async function defaultInstallChromium(): Promise<void> {
   const require = createRequire(import.meta.url);
   // playwright-core exposes ./package.json; cli.js sits beside it.
@@ -50,7 +52,17 @@ async function defaultInstallChromium(): Promise<void> {
       stdio: ["ignore", "inherit", "inherit"],
       env: process.env
     });
-    child.on("error", reject);
-    child.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`chromium install failed (exit ${code})`))));
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      reject(new Error("Chromium download timed out"));
+    }, INSTALL_CHROMIUM_TIMEOUT_MS);
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.on("exit", (code) => {
+      clearTimeout(timer);
+      code === 0 ? resolve() : reject(new Error(`chromium install failed (exit ${code})`));
+    });
   });
 }

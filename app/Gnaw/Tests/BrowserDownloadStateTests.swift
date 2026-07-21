@@ -22,4 +22,15 @@ final class BrowserDownloadStateTests: XCTestCase {
         model.consumeBrowserEvent(try event(#"{"v":2,"type":"browser","status":"found","detail":"Google Chrome"}"#))
         XCTAssertEqual(model.browserDownload, .idle)
     }
+
+    func testCancelBrowserDownloadReturnsToIdleFromDownloading() throws {
+        let model = AppModel()
+        model.consumeBrowserEvent(try event(#"{"v":2,"type":"browser","status":"downloading","detail":"x"}"#))
+        guard case .downloading = model.browserDownload else {
+            return XCTFail("expected .downloading, got \(model.browserDownload)")
+        }
+        // Safe even with no in-flight ensure process.
+        model.cancelBrowserDownload()
+        XCTAssertEqual(model.browserDownload, .idle)
+    }
 }

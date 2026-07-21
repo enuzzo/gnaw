@@ -42,7 +42,7 @@ struct NewCaptureView: View {
         }
         .alert("Download browser engine?", isPresented: Binding(
             get: { model.browserDownload == .confirming },
-            set: { if !$0 { model.cancelBrowserDownload() } }
+            set: { if !$0, model.browserDownload == .confirming { model.cancelBrowserDownload() } }
         )) {
             Button("Download") { model.confirmBrowserDownload() }
             Button("Cancel", role: .cancel) { model.cancelBrowserDownload() }
@@ -50,13 +50,24 @@ struct NewCaptureView: View {
             Text("Gnaw needs a browser engine to capture sites and none was found. Download Chromium now? This is a one-time ~150MB download.")
         }
         .overlay {
-            if case .downloading(let detail) = model.browserDownload {
+            switch model.browserDownload {
+            case .checking:
                 VStack(spacing: 12) {
                     ProgressView().controlSize(.large)
-                    Text(detail).font(.callout).foregroundStyle(.secondary)
+                    Text("Checking for a browser…").font(.callout).foregroundStyle(.secondary)
                 }
                 .padding(24)
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            case .downloading(let detail):
+                VStack(spacing: 12) {
+                    ProgressView().controlSize(.large)
+                    Text(detail).font(.callout).foregroundStyle(.secondary)
+                    Button("Cancel") { model.cancelBrowserDownload() }
+                }
+                .padding(24)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            default:
+                EmptyView()
             }
         }
         .alert("Download failed", isPresented: Binding(
@@ -188,7 +199,7 @@ struct NewCaptureView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .disabled(!model.canStart)
+                .disabled(!model.canStart || model.browserDownload != .idle)
                 .keyboardShortcut(.return, modifiers: [])
             }
         }

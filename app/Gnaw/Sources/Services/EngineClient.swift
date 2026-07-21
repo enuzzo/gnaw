@@ -29,6 +29,7 @@ final class EngineClient {
     private var stdoutReader: NDJSONLineReader?
     private var stderrReader: NDJSONLineReader?
     private var ensureReader: NDJSONLineReader?
+    private var ensureStderrReader: NDJSONLineReader?
     private var checkProcess: Process?
     private var ensureProcess: Process?
 
@@ -177,7 +178,10 @@ extension EngineClient {
     func checkBrowser(completion: @escaping (Bool) -> Void) {
         do {
             let (process, _, _, _) = try makeProcess(arguments: ["browser", "check"])
-            process.terminationHandler = { proc in completion(proc.terminationStatus == 0) }
+            process.terminationHandler = { [weak self] proc in
+                completion(proc.terminationStatus == 0)
+                self?.checkProcess = nil
+            }
             self.checkProcess = process
             try process.run()
         } catch {
@@ -191,21 +195,36 @@ extension EngineClient {
         onExit: @escaping (Int32) -> Void
     ) {
         do {
-            let (process, stdout, _, _) = try makeProcess(arguments: ["browser", "ensure"])
+            let (process, stdout, stderr, _) = try makeProcess(arguments: ["browser", "ensure"])
             let decoder = JSONDecoder()
             let reader = NDJSONLineReader(handle: stdout.fileHandleForReading) { line in
                 guard let data = line.data(using: .utf8),
                       let event = try? decoder.decode(GnawEvent.self, from: data) else { return }
                 onEvent(event)
             }
-            process.terminationHandler = { proc in reader.finish(); onExit(proc.terminationStatus) }
+            let stderrReader = NDJSONLineReader(handle: stderr.fileHandleForReading) { _ in }
+            process.terminationHandler = { [weak self] proc in
+                reader.finish()
+                stderrReader.finish()
+                onExit(proc.terminationStatus)
+                self?.ensureProcess = nil
+                self?.ensureReader = nil
+                self?.ensureStderrReader = nil
+            }
             self.ensureReader = reader
+            self.ensureStderrReader = stderrReader
             self.ensureProcess = process
             reader.start()
+            stderrReader.start()
             try process.run()
         } catch {
             onExit(-1)
         }
+    }
+
+    /// Terminates an in-flight `gnaw browser ensure` process, if any.
+    func cancelBrowserDownload() {
+        ensureProcess?.terminate()
     }
 }
 
