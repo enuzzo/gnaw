@@ -140,11 +140,9 @@ Expected result: the capture completes using the bundled engine, and a haul
 directory appears under `~/Gnaw`.
 
 This requires a system Chrome/Edge install, or Phase B (browser
-auto-download) to be implemented — Phase B is a separate, not-yet-built
-piece of work. If neither is available, the expected outcome is a
+auto-download). Phase B (browser auto-download) has since landed and is included in this DMG — see the Phase B section below. If neither is available, the expected outcome is a
 "No supported browser engine found" error, which is not a failure of this
-task's scope (bundle self-containment / launchability) but rather the known
-gap that Phase B is meant to close.
+task's scope (bundle self-containment / launchability) but rather a capture requirement.
 
 ## Phase B: final packaging run (browser auto-download included)
 
@@ -157,8 +155,7 @@ browser engine?" alert in `app/Gnaw/Sources/Views/NewCaptureView.swift`).
 These are the engine commands backing the app's download flow described in
 [`INSTALL.md`](INSTALL.md): `browser check` reports whether a supported
 Chromium-family browser is already available, and `browser ensure` performs
-the ~150MB Chromium download (streaming progress via the existing `browser`
-NDJSON event type) into the cache at
+the ~150MB Chromium download (the app reflects `browser` status events — `downloading` then `found`; no numeric progress is emitted) into the cache at
 `~/Library/Application Support/Gnaw/browsers`.
 
 This task (Task 10) reran the full packaging pipeline from scratch so the

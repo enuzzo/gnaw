@@ -33,7 +33,7 @@ capture:
 - If you already have Google Chrome, Microsoft Edge, or Chromium installed,
   Gnaw reuses it — nothing to download.
 - If none is found, Gnaw asks before it downloads one automatically: a
-  one-time ~150MB Chromium download with a progress bar, cached under
+  one-time ~150MB Chromium download with a spinner and status message, cached under
   `~/Library/Application Support/Gnaw/browsers` for all future captures.
 
 This check and download are driven by the bundled engine's own
